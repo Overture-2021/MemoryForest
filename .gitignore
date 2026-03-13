@@ -1,0 +1,19 @@
+# dependencies
+/node_modules/
+
+# build output
+/dist/
+
+# local environment overrides
+.env.local
+.env.*.local
+
+# package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
