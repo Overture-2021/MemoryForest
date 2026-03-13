@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Person, Event } from "../types/thread-memories";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Person, Event } from '../types/thread-memories';
 
 interface ThreadCanvasProps {
   people: Person[];
@@ -8,126 +8,374 @@ interface ThreadCanvasProps {
 }
 
 const msPerDay = 24 * 60 * 60 * 1000;
+const MIN_CANVAS_WIDTH = 280;
+const EVENT_LABEL_MARGIN = 12;
+const EVENT_LABEL_GAP = 10;
+const EVENT_LABEL_HORIZONTAL_PADDING = 12;
+const EVENT_LABEL_VERTICAL_PADDING = 10;
+const EVENT_LABEL_TITLE_LINE_HEIGHT = 15;
+const EVENT_LABEL_META_LINE_HEIGHT = 12;
+const EVENT_LABEL_SECTION_GAP = 6;
+const EVENT_TAG_HEIGHT = 22;
+const EVENT_TAG_GAP = 8;
+
+interface BoxLayout {
+  height: number;
+  id: string;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface EventLabelLayout {
+  connectorX: number;
+  dateLabel: string;
+  height: number;
+  interpretationLines: string[];
+  textX: number;
+  titleLines: string[];
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface EventThreadTagLayout {
+  dotX: number;
+  height: number;
+  id: string;
+  label: string;
+  textX: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function truncateText(text: string, maxChars: number) {
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(1, maxChars - 1)).trimEnd()}...`;
+}
+
+function wrapText(text: string, maxChars: number, maxLines: number) {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+  if (!normalized) return [];
+
+  const words = normalized.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      currentLine = candidate;
+      continue;
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+      currentLine = '';
+    }
+
+    if (lines.length === maxLines) {
+      break;
+    }
+
+    if (word.length > maxChars) {
+      lines.push(truncateText(word, maxChars));
+    } else {
+      currentLine = word;
+    }
+
+    if (lines.length === maxLines) {
+      break;
+    }
+  }
+
+  if (currentLine && lines.length < maxLines) {
+    lines.push(currentLine);
+  }
+
+  if (lines.length === 0) {
+    lines.push(truncateText(normalized, maxChars));
+  }
+
+  const overflowed = normalized !== lines.join(' ');
+  if (overflowed) {
+    lines[lines.length - 1] = truncateText(lines[lines.length - 1], maxChars);
+  }
+
+  return lines.slice(0, maxLines);
+}
+
+function rangesOverlap(startA: number, endA: number, startB: number, endB: number, padding = 0) {
+  return startA < endB + padding && startB < endA + padding;
+}
+
+function resolveVerticalCollisions<T extends BoxLayout>(
+  layouts: T[],
+  minY: number,
+  maxY: number,
+  gap: number,
+) {
+  const initial = layouts
+    .map((layout) => ({
+      ...layout,
+      y: clamp(layout.y, minY, Math.max(minY, maxY - layout.height)),
+    }))
+    .sort((a, b) => a.y - b.y);
+
+  const forwardPass: T[] = [];
+  for (const layout of initial) {
+    let nextY = layout.y;
+    for (const placed of forwardPass) {
+      if (
+        rangesOverlap(layout.x, layout.x + layout.width, placed.x, placed.x + placed.width, gap) &&
+        nextY < placed.y + placed.height + gap
+      ) {
+        nextY = placed.y + placed.height + gap;
+      }
+    }
+
+    forwardPass.push({
+      ...layout,
+      y: Math.min(nextY, Math.max(minY, maxY - layout.height)),
+    });
+  }
+
+  const resolved = [...forwardPass].sort((a, b) => b.y - a.y);
+  const backwardPass: T[] = [];
+  for (const layout of resolved) {
+    let nextY = layout.y;
+    for (const placed of backwardPass) {
+      if (
+        rangesOverlap(layout.x, layout.x + layout.width, placed.x, placed.x + placed.width, gap)
+      ) {
+        nextY = Math.min(nextY, placed.y - gap - layout.height);
+      }
+    }
+
+    backwardPass.push({
+      ...layout,
+      y: Math.max(minY, nextY),
+    });
+  }
+
+  const yById = new Map(backwardPass.map((layout) => [layout.id, layout.y]));
+  return layouts.map((layout) => ({
+    ...layout,
+    y: yById.get(layout.id) ?? layout.y,
+  }));
+}
+
+function getEventLabelLayout(
+  x: number,
+  y: number,
+  svgWidth: number,
+  title: string,
+  interpretation: string | undefined,
+  timestamp: number,
+): EventLabelLayout {
+  const maxWidth = Math.max(120, Math.min(240, svgWidth - 24));
+  const minWidth = Math.min(136, maxWidth);
+  const maxChars = Math.max(
+    18,
+    Math.floor((Math.min(maxWidth, Math.max(minWidth, title.length * 6.8 + 24)) - 24) / 6.8),
+  );
+  const titleLines = wrapText(title, maxChars, 2);
+  const interpretationLines = interpretation ? wrapText(interpretation, maxChars, 2) : [];
+  const dateLabel = new Date(timestamp).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  const longestLine = Math.max(
+    ...titleLines.map((line) => line.length),
+    ...interpretationLines.map((line) => line.length),
+    dateLabel.length,
+    16,
+  );
+  const width = clamp(longestLine * 6.6 + EVENT_LABEL_HORIZONTAL_PADDING * 2, minWidth, maxWidth);
+  const preferredRightX = x + 16;
+  const placeOnRight = preferredRightX + width <= svgWidth - 12 || x < svgWidth / 2;
+  const labelX = placeOnRight
+    ? Math.min(preferredRightX, svgWidth - width - 12)
+    : Math.max(12, x - width - 16);
+  const titleHeight = titleLines.length * EVENT_LABEL_TITLE_LINE_HEIGHT;
+  const interpretationHeight = interpretationLines.length * EVENT_LABEL_META_LINE_HEIGHT;
+  const height =
+    EVENT_LABEL_VERTICAL_PADDING * 2 +
+    titleHeight +
+    EVENT_LABEL_SECTION_GAP +
+    EVENT_LABEL_META_LINE_HEIGHT +
+    (interpretationLines.length > 0
+      ? EVENT_LABEL_SECTION_GAP + interpretationHeight
+      : 0);
+
+  return {
+    connectorX: placeOnRight ? labelX : labelX + width,
+    dateLabel,
+    height,
+    interpretationLines,
+    textX: labelX + EVENT_LABEL_HORIZONTAL_PADDING,
+    titleLines,
+    width,
+    x: labelX,
+    y: y - height / 2,
+  };
+}
+
+function getThreadTagLayout(id: string, x: number, y: number, svgWidth: number, name: string) {
+  const maxWidth = Math.max(90, Math.min(180, svgWidth - 24));
+  const minWidth = Math.min(88, maxWidth);
+  const maxChars = Math.max(10, Math.floor((maxWidth - 28) / 6.7));
+  const label = truncateText(name, maxChars);
+  const width = clamp(label.length * 6.9 + 28, minWidth, maxWidth);
+  const preferredRightX = x + 14;
+  const placeOnRight = preferredRightX + width <= svgWidth - 12 || x < svgWidth / 2;
+  const labelX = placeOnRight
+    ? Math.min(preferredRightX, svgWidth - width - 12)
+    : Math.max(12, x - width - 14);
+
+  return {
+    height: EVENT_TAG_HEIGHT,
+    id,
+    label,
+    dotX: placeOnRight ? labelX - 6 : labelX + width + 6,
+    textX: labelX + width / 2,
+    width,
+    x: labelX,
+    y: y - EVENT_TAG_HEIGHT / 2,
+  };
+}
 
 export function ThreadCanvas({
   people,
   events,
   onEventClick,
 }: ThreadCanvasProps) {
-  const SVG_WIDTH = 1200;
-  const SIDE_MARGIN = 100;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState(1200);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateWidth = (width: number) => {
+      setCanvasWidth(Math.max(MIN_CANVAS_WIDTH, Math.floor(width)));
+    };
+
+    updateWidth(container.clientWidth);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        updateWidth(entry.contentRect.width);
+      }
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   const {
+    sideMargin,
+    svgWidth,
     threadPositions,
     eventNodes,
     allColumns,
+    personColumns,
+    eventThreadColumns,
+    eventThreadColorById,
+    eventThreadTags,
     totalHeight,
     getY,
     gridLines,
     eventThreadRanges,
   } = useMemo(() => {
+    const svgWidth = Math.max(MIN_CANVAS_WIDTH, canvasWidth);
+    const sideMargin = clamp(svgWidth * 0.08, 52, 100);
+    const rightMargin = clamp(svgWidth * 0.14, 96, 150);
+
     if (people.length === 0 && events.length === 0) {
       return {
-        threadPositions: new Map<string, number>(),
-        eventNodes: [],
         allColumns: [],
-        totalHeight: 800,
-        getY: (t: number) => 0,
+        eventNodes: [],
+        eventThreadColumns: [],
+        eventThreadColorById: new Map<string, string>(),
+        eventThreadTags: [],
+        eventThreadRanges: new Map<string, { minY: number; maxY: number }>(),
+        getY: (_timestamp: number) => 0,
         gridLines: [],
-        eventThreadRanges: new Map<
-          string,
-          { minY: number; maxY: number }
-        >(),
+        personColumns: [],
+        sideMargin,
+        svgWidth,
+        threadPositions: new Map<string, number>(),
+        totalHeight: 800,
       };
     }
 
     const timestamps = events.map((e) => e.timestamp);
     const hasEvents = timestamps.length > 0;
-
-    // Default to current time if no events
-    const minTime = hasEvents
-      ? Math.min(...timestamps)
-      : Date.now();
-    const maxTime = hasEvents
-      ? Math.max(...timestamps)
-      : Date.now();
-
+    const minTime = hasEvents ? Math.min(...timestamps) : Date.now();
+    const maxTime = hasEvents ? Math.max(...timestamps) : Date.now();
     const timeSpanMs = maxTime - minTime;
-    const PADDING_MS = Math.max(7 * msPerDay, timeSpanMs * 0.1); // At least 1 week padding
-    const paddedMinMs = minTime - PADDING_MS;
-    const paddedMaxMs = maxTime + PADDING_MS;
+    const paddingMs = Math.max(7 * msPerDay, timeSpanMs * 0.1);
+    const paddedMinMs = minTime - paddingMs;
+    const paddedMaxMs = maxTime + paddingMs;
     const totalSpanMs = paddedMaxMs - paddedMinMs;
 
-    let TIME_SCALE = 20 / msPerDay; // 20px per day
-    let calcHeight = totalSpanMs * TIME_SCALE;
+    let timeScale = 20 / msPerDay;
+    let calcHeight = totalSpanMs * timeScale;
 
-    // Cap height to avoid performance issues, min 800px
     if (calcHeight > 15000) {
-      TIME_SCALE = 15000 / totalSpanMs;
+      timeScale = 15000 / totalSpanMs;
       calcHeight = 15000;
     } else if (calcHeight < 800) {
-      TIME_SCALE = 800 / totalSpanMs;
+      timeScale = 800 / totalSpanMs;
       calcHeight = 800;
     }
 
     const totalHeight = calcHeight;
-    // Y flows from top (newest) to bottom (oldest)
-    const getY = (timestamp: number) =>
-      (paddedMaxMs - timestamp) * TIME_SCALE;
+    const getY = (timestamp: number) => (paddedMaxMs - timestamp) * timeScale;
 
-    // Generate Grid lines (Dates)
     const gridLines: { time: number; label: string }[] = [];
     if (hasEvents) {
       const days = totalSpanMs / msPerDay;
       const minDate = new Date(paddedMinMs);
-      const maxDate = new Date(paddedMaxMs);
 
       if (days <= 60) {
-        // Daily markers
-        const start = new Date(
-          minDate.getFullYear(),
-          minDate.getMonth(),
-          minDate.getDate(),
-        );
-        for (
-          let d = new Date(start);
-          d.getTime() <= paddedMaxMs;
-          d.setDate(d.getDate() + 1)
-        ) {
+        const start = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
+        for (let d = new Date(start); d.getTime() <= paddedMaxMs; d.setDate(d.getDate() + 1)) {
           if (d.getTime() >= paddedMinMs) {
             gridLines.push({
               time: d.getTime(),
               label: d.toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
+                month: 'short',
+                day: 'numeric',
               }),
             });
           }
         }
       } else if (days <= 730) {
-        // Monthly markers
-        const start = new Date(
-          minDate.getFullYear(),
-          minDate.getMonth(),
-          1,
-        );
-        for (
-          let d = new Date(start);
-          d.getTime() <= paddedMaxMs;
-          d.setMonth(d.getMonth() + 1)
-        ) {
+        const start = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        for (let d = new Date(start); d.getTime() <= paddedMaxMs; d.setMonth(d.getMonth() + 1)) {
           if (d.getTime() >= paddedMinMs) {
             gridLines.push({
               time: d.getTime(),
               label: d.toLocaleDateString(undefined, {
-                month: "short",
-                year: "numeric",
+                month: 'short',
+                year: 'numeric',
               }),
             });
           }
         }
       } else {
-        // Yearly markers
         const start = new Date(minDate.getFullYear(), 0, 1);
         for (
           let d = new Date(start);
@@ -145,72 +393,52 @@ export function ThreadCanvas({
     }
 
     const positions = new Map<string, number>();
-    const eventThreads = new Set(
-      events.map((e) => e.threadId).filter(Boolean) as string[],
-    );
-
+    const eventThreads = new Set(events.map((e) => e.threadId).filter(Boolean) as string[]);
     const columns = [
       ...people.map((p) => ({
-        id: p.id,
-        type: "person" as const,
-        name: p.name,
         color: p.color,
+        id: p.id,
+        name: p.name,
+        type: 'person' as const,
       })),
       ...Array.from(eventThreads).map((tid) => {
-        const threadEvents = events.filter(
-          (e) => e.threadId === tid,
-        );
+        const threadEvents = events.filter((e) => e.threadId === tid);
         return {
+          color: threadEvents[0]?.color || '#64748b',
           id: tid,
-          type: "eventThread" as const,
           name: tid,
-          color: threadEvents[0]?.color || "#64748b",
+          type: 'eventThread' as const,
         };
       }),
     ];
+    const personColumns = columns.filter((col) => col.type === 'person');
+    const eventThreadColumns = columns.filter((col) => col.type === 'eventThread');
+    const eventThreadColorById = new Map(eventThreadColumns.map((col) => [col.id, col.color]));
 
-    const rightMargin = 150;
-    const availableWidth =
-      SVG_WIDTH - SIDE_MARGIN - rightMargin;
-    const spacing =
-      columns.length > 1
-        ? availableWidth / (columns.length - 1)
-        : availableWidth / 2;
+    const availableWidth = Math.max(svgWidth - sideMargin - rightMargin, 160);
+    const spacing = columns.length > 1 ? availableWidth / (columns.length - 1) : availableWidth / 2;
 
     columns.forEach((col, index) => {
       positions.set(
         col.id,
-        SIDE_MARGIN +
-          (columns.length === 1
-            ? availableWidth / 2
-            : index * spacing),
+        sideMargin + (columns.length === 1 ? availableWidth / 2 : index * spacing),
       );
     });
 
-    const eventThreadRanges = new Map<
-      string,
-      { minY: number; maxY: number }
-    >();
+    const eventThreadRanges = new Map<string, { minY: number; maxY: number }>();
     Array.from(eventThreads).forEach((tid) => {
-      const threadEvents = events.filter(
-        (e) => e.threadId === tid,
-      );
+      const threadEvents = events.filter((e) => e.threadId === tid);
       if (threadEvents.length > 0) {
-        const tMin = Math.min(
-          ...threadEvents.map((e) => e.timestamp),
-        );
-        const tMax = Math.max(
-          ...threadEvents.map((e) => e.timestamp),
-        );
-        // minY is the top event (latest in time), maxY is the bottom event (earliest in time)
+        const earliestTimestamp = Math.min(...threadEvents.map((e) => e.timestamp));
+        const latestTimestamp = Math.max(...threadEvents.map((e) => e.timestamp));
         eventThreadRanges.set(tid, {
-          minY: getY(tMax),
-          maxY: getY(tMin),
+          maxY: getY(earliestTimestamp),
+          minY: getY(latestTimestamp),
         });
       }
     });
 
-    const nodes = events.map((event) => {
+    const eventNodes = events.map((event) => {
       const y = getY(event.timestamp);
 
       let x: number;
@@ -219,57 +447,102 @@ export function ThreadCanvas({
       } else {
         const personPositions = event.personIds
           .map((pid) => positions.get(pid))
-          .filter((p): p is number => p !== undefined);
+          .filter((position): position is number => position !== undefined);
         x =
           personPositions.length > 0
-            ? personPositions.reduce((a, b) => a + b, 0) /
-              personPositions.length
-            : SIDE_MARGIN + availableWidth / 2;
+            ? personPositions.reduce((sum, position) => sum + position, 0) / personPositions.length
+            : sideMargin + availableWidth / 2;
       }
 
-      return { event, x, y };
+      return {
+        event,
+        labelLayout: getEventLabelLayout(
+          x,
+          y,
+          svgWidth,
+          event.title,
+          event.interpretation,
+          event.timestamp,
+        ),
+        x,
+        y,
+      };
     });
 
+    const resolvedLabelLayouts = resolveVerticalCollisions(
+      eventNodes.map(({ event, labelLayout }) => ({
+        ...labelLayout,
+        id: event.id,
+      })),
+      EVENT_LABEL_MARGIN,
+      totalHeight - EVENT_LABEL_MARGIN,
+      EVENT_LABEL_GAP,
+    );
+    const labelByEventId = new Map(resolvedLabelLayouts.map((layout) => [layout.id, layout]));
+    const positionedEventNodes = eventNodes.map((node) => ({
+      ...node,
+      labelLayout: labelByEventId.get(node.event.id) ?? node.labelLayout,
+    }));
+
+    const eventThreadTags = resolveVerticalCollisions(
+      eventThreadColumns
+        .map((col) => {
+          const x = positions.get(col.id);
+          const range = eventThreadRanges.get(col.id);
+          if (x === undefined || !range) return null;
+
+          const startY = Math.max(20, range.minY - 40);
+          return getThreadTagLayout(col.id, x, Math.min(totalHeight - 24, startY + 18), svgWidth, col.name);
+        })
+        .filter((tag): tag is EventThreadTagLayout => tag !== null),
+      12,
+      totalHeight - 12,
+      EVENT_TAG_GAP,
+    );
+
     return {
-      threadPositions: positions,
-      eventNodes: nodes,
       allColumns: columns,
-      totalHeight,
+      eventNodes: positionedEventNodes,
+      eventThreadColumns,
+      eventThreadColorById,
+      eventThreadTags,
+      eventThreadRanges,
       getY,
       gridLines,
-      eventThreadRanges,
+      personColumns,
+      sideMargin,
+      svgWidth,
+      threadPositions: positions,
+      totalHeight,
     };
-  }, [people, events]);
+  }, [canvasWidth, people, events]);
 
   return (
-    <div className="w-full h-full overflow-auto bg-slate-50 rounded-lg border border-slate-200 shadow-inner custom-scrollbar">
-      <div
-        style={{ width: SVG_WIDTH, minHeight: "100%" }}
-        className="flex flex-col relative"
-      >
-        {/* Sticky Header for People/Thread Names */}
-        <div className="sticky top-0 h-[60px] bg-white/95 backdrop-blur-md border-b border-slate-200 z-20 shrink-0 shadow-sm w-full">
-          {allColumns.map((col) => {
+    <div
+      ref={containerRef}
+      className="h-full min-h-[420px] w-full overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+    >
+      <div className="relative flex min-h-full flex-col">
+        <div className="sticky top-0 z-20 h-[60px] w-full shrink-0 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
+          {personColumns.map((col) => {
             const x = threadPositions.get(col.id);
             if (x === undefined) return null;
+
             return (
               <div
                 key={col.id}
-                className="absolute top-0 flex flex-col items-center justify-center h-full -translate-x-1/2 transition-transform"
+                className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-transform"
                 style={{ left: x }}
               >
                 <div
-                  className="w-3 h-3 mb-1.5 shadow-sm"
+                  className="mb-1.5 h-3 w-3 shadow-sm"
                   style={{
                     backgroundColor: col.color,
-                    borderRadius:
-                      col.type === "eventThread"
-                        ? "2px"
-                        : "50%",
+                    borderRadius: '50%',
                   }}
                 />
                 <span
-                  className="text-xs font-semibold px-2 py-0.5 rounded text-white whitespace-nowrap shadow-sm"
+                  className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"
                   style={{ backgroundColor: col.color }}
                 >
                   {col.name}
@@ -279,38 +552,35 @@ export function ThreadCanvas({
           })}
         </div>
 
-        {/* Timeline Canvas */}
-        <div
-          className="relative"
-          style={{ height: totalHeight }}
-        >
+        <div className="relative" style={{ height: totalHeight }}>
           <svg
             width="100%"
             height="100%"
+            viewBox={`0 0 ${svgWidth} ${totalHeight}`}
+            preserveAspectRatio="none"
             className="absolute inset-0"
           >
-            {/* Horizontal Grid Lines (Dates) */}
-            {gridLines.map((line, i) => {
+            {gridLines.map((line, index) => {
               const y = getY(line.time);
               return (
-                <g key={`grid-${i}`}>
+                <g key={`grid-${index}`}>
                   <line
-                    x1={SIDE_MARGIN - 20}
+                    x1={Math.max(12, sideMargin - 20)}
                     y1={y}
-                    x2={SVG_WIDTH}
+                    x2={svgWidth - 12}
                     y2={y}
                     stroke="#e2e8f0"
                     strokeWidth="1"
                     strokeDasharray="4,4"
                   />
                   <text
-                    x={SIDE_MARGIN - 30}
+                    x={Math.max(8, sideMargin - 30)}
                     y={y + 4}
                     textAnchor="end"
                     fill="#64748b"
                     fontSize="12"
                     fontWeight="500"
-                    className="select-none pointer-events-none"
+                    className="pointer-events-none select-none"
                   >
                     {line.label}
                   </text>
@@ -318,13 +588,11 @@ export function ThreadCanvas({
               );
             })}
 
-            {/* Vertical Thread Lines */}
             {allColumns.map((col) => {
               const x = threadPositions.get(col.id);
               if (x === undefined) return null;
 
-              if (col.type === "person") {
-                // People threads span full height, infinite up/down
+              if (col.type === 'person') {
                 return (
                   <line
                     key={col.id}
@@ -337,41 +605,82 @@ export function ThreadCanvas({
                     opacity="0.3"
                   />
                 );
-              } else {
-                // Event threads span only their event ranges
-                const range = eventThreadRanges.get(col.id);
-                if (!range) return null;
-                const startY = Math.max(0, range.minY - 40);
-                const endY = Math.min(
-                  totalHeight,
-                  range.maxY + 40,
-                );
-
-                return (
-                  <line
-                    key={col.id}
-                    x1={x}
-                    y1={startY}
-                    x2={x}
-                    y2={endY}
-                    stroke={col.color}
-                    strokeWidth="4"
-                    strokeDasharray="6,4"
-                    opacity="0.4"
-                  />
-                );
               }
+
+              const range = eventThreadRanges.get(col.id);
+              if (!range) return null;
+
+              const startY = Math.max(0, range.minY - 40);
+              const endY = Math.min(totalHeight, range.maxY + 40);
+
+              return (
+                <line
+                  key={col.id}
+                  x1={x}
+                  y1={startY}
+                  x2={x}
+                  y2={endY}
+                  stroke={col.color}
+                  strokeWidth="4"
+                  strokeDasharray="6,4"
+                  opacity="0.4"
+                />
+              );
             })}
 
-            {/* Connections between nodes and people */}
-            {eventNodes.map(({ event, x, y }) => {
-              return event.personIds.map((personId) => {
+            {eventThreadTags.map((tagLayout) => {
+              const x = threadPositions.get(tagLayout.id);
+              if (x === undefined) return null;
+              const tagY = tagLayout.y + tagLayout.height / 2;
+              return (
+                <g key={`${tagLayout.id}-tag`} className="pointer-events-none select-none">
+                  <line
+                    x1={x}
+                    y1={tagY}
+                    x2={tagLayout.dotX}
+                    y2={tagY}
+                    stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    strokeWidth="1.5"
+                    opacity="0.7"
+                  />
+                  <circle
+                    cx={tagLayout.dotX}
+                    cy={tagY}
+                    r={3.5}
+                    fill={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    opacity="0.85"
+                  />
+                  <rect
+                    x={tagLayout.x}
+                    y={tagLayout.y}
+                    width={tagLayout.width}
+                    height={tagLayout.height}
+                    rx={11}
+                    fill="white"
+                    fillOpacity="0.96"
+                    stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={tagLayout.textX}
+                    y={tagY + 4}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fontWeight="600"
+                    fill="#1e293b"
+                  >
+                    {tagLayout.label}
+                  </text>
+                </g>
+              );
+            })}
+
+            {eventNodes.map(({ event, x, y }) =>
+              event.personIds.map((personId) => {
                 const threadX = threadPositions.get(personId);
                 if (threadX === undefined) return null;
 
-                const person = people.find(
-                  (p) => p.id === personId,
-                );
+                const person = people.find((p) => p.id === personId);
 
                 return (
                   <line
@@ -380,22 +689,20 @@ export function ThreadCanvas({
                     y1={y}
                     x2={x}
                     y2={y}
-                    stroke={person?.color || "#64748b"}
+                    stroke={person?.color || '#64748b'}
                     strokeWidth="2"
                     opacity="0.5"
                   />
                 );
-              });
-            })}
+              }),
+            )}
 
-            {/* Event Nodes */}
-            {eventNodes.map(({ event, x, y }) => (
+            {eventNodes.map(({ event, labelLayout, x, y }) => (
               <g
                 key={event.id}
                 onClick={() => onEventClick?.(event)}
-                className="cursor-pointer group"
+                className="group cursor-pointer"
               >
-                {/* Node Circles */}
                 <circle
                   cx={x}
                   cy={y}
@@ -403,10 +710,8 @@ export function ThreadCanvas({
                   fill={event.color}
                   stroke="white"
                   strokeWidth="2"
-                  className="transition-all duration-200 group-hover:r-[10]"
                   style={{
-                    filter:
-                      "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))",
+                    filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
                   }}
                 />
                 <circle
@@ -417,77 +722,99 @@ export function ThreadCanvas({
                   className="group-hover:fill-black group-hover:fill-opacity-5"
                 />
 
-                {/* Event Label Box */}
-                <rect
-                  x={x + 16}
-                  y={y - (event.interpretation ? 24 : 16)}
-                  width={Math.min(
-                    200,
-                    Math.max(120, event.title.length * 8),
-                  )}
-                  height={event.interpretation ? 48 : 32}
-                  fill="white"
-                  fillOpacity="0.95"
-                  rx="6"
-                  stroke="#e2e8f0"
-                  strokeWidth="1"
-                  className="pointer-events-none transition-all duration-200 group-hover:shadow-md group-hover:stroke-slate-300"
+                <line
+                  x1={x}
+                  y1={y}
+                  x2={labelLayout.connectorX}
+                  y2={labelLayout.y + labelLayout.height / 2}
+                  stroke={event.color}
+                  strokeWidth="1.5"
+                  opacity="0.35"
+                  className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 />
 
-                {/* Title */}
-                <text
-                  x={x + 24}
-                  y={y - (event.interpretation ? 6 : -4)}
-                  fontSize="13"
-                  fontWeight="600"
-                  fill="#1e293b"
-                  className="pointer-events-none select-none"
-                >
-                  {event.title.length > 25
-                    ? event.title.substring(0, 25) + "..."
-                    : event.title}
-                </text>
+                <g className="pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <rect
+                    x={labelLayout.x}
+                    y={labelLayout.y}
+                    width={labelLayout.width}
+                    height={labelLayout.height}
+                    fill="white"
+                    fillOpacity="0.95"
+                    rx="6"
+                    stroke="#e2e8f0"
+                    strokeWidth="1"
+                    className="transition-all duration-200 group-hover:stroke-slate-300"
+                  />
 
-                {/* Date */}
-                <text
-                  x={x + 24}
-                  y={y + (event.interpretation ? 8 : 10)}
-                  fontSize="10"
-                  fill="#64748b"
-                  className="pointer-events-none select-none"
-                >
-                  {new Date(event.timestamp).toLocaleString(
-                    undefined,
-                    {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    },
-                  )}
-                </text>
-
-                {/* Interpretation */}
-                {event.interpretation && (
                   <text
-                    x={x + 24}
-                    y={y + 18}
-                    fontSize="11"
-                    fill="#64748b"
-                    fontStyle="italic"
-                    className="pointer-events-none select-none"
+                    x={labelLayout.textX}
+                    y={labelLayout.y + EVENT_LABEL_VERTICAL_PADDING}
+                    fontSize="13"
+                    fontWeight="600"
+                    fill="#1e293b"
+                    className="select-none"
+                    dominantBaseline="hanging"
                   >
-                    {event.interpretation.length > 30
-                      ? event.interpretation.substring(0, 30) +
-                        "..."
-                      : event.interpretation}
+                    {labelLayout.titleLines.map((line, index) => (
+                      <tspan
+                        key={`${event.id}-title-${index}`}
+                        x={labelLayout.textX}
+                        dy={index === 0 ? 0 : EVENT_LABEL_TITLE_LINE_HEIGHT}
+                      >
+                        {line}
+                      </tspan>
+                    ))}
                   </text>
-                )}
+
+                  <text
+                    x={labelLayout.textX}
+                    y={
+                      labelLayout.y +
+                      EVENT_LABEL_VERTICAL_PADDING +
+                      labelLayout.titleLines.length * EVENT_LABEL_TITLE_LINE_HEIGHT +
+                      EVENT_LABEL_SECTION_GAP
+                    }
+                    fontSize="10"
+                    fill="#64748b"
+                    className="select-none"
+                    dominantBaseline="hanging"
+                  >
+                    {labelLayout.dateLabel}
+                  </text>
+
+                  {labelLayout.interpretationLines.length > 0 && (
+                    <text
+                      x={labelLayout.textX}
+                      y={
+                        labelLayout.y +
+                        EVENT_LABEL_VERTICAL_PADDING +
+                        labelLayout.titleLines.length * EVENT_LABEL_TITLE_LINE_HEIGHT +
+                        EVENT_LABEL_SECTION_GAP +
+                        EVENT_LABEL_META_LINE_HEIGHT +
+                        EVENT_LABEL_SECTION_GAP
+                      }
+                      fontSize="11"
+                      fill="#64748b"
+                      fontStyle="italic"
+                      className="select-none"
+                      dominantBaseline="hanging"
+                    >
+                      {labelLayout.interpretationLines.map((line, index) => (
+                        <tspan
+                          key={`${event.id}-interpretation-${index}`}
+                          x={labelLayout.textX}
+                          dy={index === 0 ? 0 : EVENT_LABEL_META_LINE_HEIGHT}
+                        >
+                          {line}
+                        </tspan>
+                      ))}
+                    </text>
+                  )}
+                </g>
               </g>
             ))}
 
-            {/* Empty State Overlay */}
             {events.length === 0 && people.length === 0 && (
               <text
                 x="50%"
@@ -497,8 +824,7 @@ export function ThreadCanvas({
                 fontSize="16"
                 className="pointer-events-none"
               >
-                Add people and events to start building your
-                thread memory
+                Add people and events to start building your thread memory
               </text>
             )}
           </svg>
