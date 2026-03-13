@@ -29,9 +29,9 @@ interface BoxLayout {
 
 interface EventLabelLayout {
   connectorX: number;
-  dateLabel: string;
   height: number;
   interpretationLines: string[];
+  metaLabel: string;
   textX: number;
   titleLines: string[];
   width: number;
@@ -48,6 +48,22 @@ interface EventThreadTagLayout {
   width: number;
   x: number;
   y: number;
+}
+
+function getPersonEventConnectorPath(
+  threadX: number,
+  eventX: number,
+  eventY: number,
+  personIndex: number,
+  totalPeople: number,
+) {
+  const distance = Math.abs(eventX - threadX);
+  const baseCurveHeight = clamp(distance * 0.22, 20, 56);
+  const centeredIndex = personIndex - (totalPeople - 1) / 2;
+  const fanHeight = Math.abs(centeredIndex) * 8;
+  const controlY = eventY + baseCurveHeight + fanHeight;
+
+  return `M ${threadX} ${eventY} C ${threadX} ${controlY}, ${eventX} ${controlY}, ${eventX} ${eventY}`;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -177,6 +193,7 @@ function getEventLabelLayout(
   title: string,
   interpretation: string | undefined,
   timestamp: number,
+  participantCount: number,
 ): EventLabelLayout {
   const maxWidth = Math.max(120, Math.min(240, svgWidth - 24));
   const minWidth = Math.min(136, maxWidth);
@@ -193,10 +210,12 @@ function getEventLabelLayout(
     hour: 'numeric',
     minute: '2-digit',
   });
+  const participantLabel = `${participantCount} ☺︎`;
+  const metaLabel = `${dateLabel} • ${participantLabel}`;
   const longestLine = Math.max(
     ...titleLines.map((line) => line.length),
     ...interpretationLines.map((line) => line.length),
-    dateLabel.length,
+    metaLabel.length,
     16,
   );
   const width = clamp(longestLine * 6.6 + EVENT_LABEL_HORIZONTAL_PADDING * 2, minWidth, maxWidth);
@@ -218,9 +237,9 @@ function getEventLabelLayout(
 
   return {
     connectorX: placeOnRight ? labelX : labelX + width,
-    dateLabel,
     height,
     interpretationLines,
+    metaLabel,
     textX: labelX + EVENT_LABEL_HORIZONTAL_PADDING,
     titleLines,
     width,
@@ -463,6 +482,7 @@ export function ThreadCanvas({
           event.title,
           event.interpretation,
           event.timestamp,
+          event.personIds.length,
         ),
         x,
         y,
@@ -676,22 +696,27 @@ export function ThreadCanvas({
             })}
 
             {eventNodes.map(({ event, x, y }) =>
-              event.personIds.map((personId) => {
+              event.personIds.map((personId, personIndex) => {
                 const threadX = threadPositions.get(personId);
                 if (threadX === undefined) return null;
 
                 const person = people.find((p) => p.id === personId);
 
                 return (
-                  <line
+                  <path
                     key={`${event.id}-${personId}`}
-                    x1={threadX}
-                    y1={y}
-                    x2={x}
-                    y2={y}
+                    d={getPersonEventConnectorPath(
+                      threadX,
+                      x,
+                      y,
+                      personIndex,
+                      event.personIds.length,
+                    )}
                     stroke={person?.color || '#64748b'}
                     strokeWidth="2"
                     opacity="0.5"
+                    fill="none"
+                    strokeLinecap="round"
                   />
                 );
               }),
@@ -780,7 +805,7 @@ export function ThreadCanvas({
                     className="select-none"
                     dominantBaseline="hanging"
                   >
-                    {labelLayout.dateLabel}
+                    {labelLayout.metaLabel}
                   </text>
 
                   {labelLayout.interpretationLines.length > 0 && (
