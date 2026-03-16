@@ -15,6 +15,7 @@ const TIMELINE_FLOOR_MS = new Date(1900, 0, 1).getTime();
 const MIN_FUTURE_BUFFER_MS = 10 * approximateMsPerYear;
 const FUTURE_BUFFER_RATIO = 0.15;
 const MIN_CANVAS_WIDTH = 280;
+const INITIAL_VERTICAL_ZOOM = 8.92;
 const MIN_VERTICAL_ZOOM = 0.5;
 const MAX_VERTICAL_ZOOM = 320;
 const ZOOM_STEP = 1.2;
@@ -204,6 +205,10 @@ function mergeGridLines(lines: GridLine[]) {
         time,
       };
     });
+}
+
+function getDisplayedZoomPercent(zoom: number) {
+  return Math.max(1, Math.round((zoom / INITIAL_VERTICAL_ZOOM) * 100));
 }
 
 function truncateText(text: string, maxChars: number) {
@@ -514,8 +519,10 @@ export function ThreadCanvas({
     anchorRatio: number;
     zoom: number;
   } | null>(null);
+  const hasInitializedViewportRef = useRef(false);
+  const [presentAnchorTime] = useState(() => Date.now());
   const [canvasWidth, setCanvasWidth] = useState(1200);
-  const [verticalZoom, setVerticalZoom] = useState(1);
+  const [verticalZoom, setVerticalZoom] = useState(INITIAL_VERTICAL_ZOOM);
   const [viewportMetrics, setViewportMetrics] = useState({
     height: 0,
     scrollTop: 0,
@@ -646,46 +653,25 @@ export function ThreadCanvas({
     getY,
     gridLines,
     eventThreadRanges,
+    presentY,
   } = useMemo(() => {
     const svgWidth = Math.max(MIN_CANVAS_WIDTH, canvasWidth);
     const sideMargin = clamp(svgWidth * 0.08, 52, 100);
     const rightMargin = clamp(svgWidth * 0.14, 96, 150);
 
-    if (people.length === 0 && events.length === 0) {
-      return {
-        allColumns: [],
-        eventNodes: [],
-        eventThreadColumns: [],
-        eventThreadColorById: new Map<string, string>(),
-        eventThreadTags: [],
-        eventThreadRanges: new Map<string, { minY: number; maxY: number }>(),
-        getY: (_timestamp: number) => 0,
-        gridLines: [],
-        personColumns: [],
-        sideMargin,
-        svgWidth,
-        threadPositions: new Map<string, number>(),
-        totalHeight: 800,
-      };
-    }
-
     const timestamps = events.map((e) => e.timestamp);
     const hasEvents = timestamps.length > 0;
-    const minTime = hasEvents ? Math.min(...timestamps) : Date.now();
-    const maxTime = hasEvents ? Math.max(...timestamps) : Date.now();
+    const minTime = hasEvents ? Math.min(...timestamps) : presentAnchorTime;
+    const maxTime = hasEvents ? Math.max(...timestamps) : presentAnchorTime;
     const timeSpanMs = maxTime - minTime;
     const paddingMs = Math.max(7 * msPerDay, timeSpanMs * 0.1);
-    const paddedMinMs = hasEvents
-      ? Math.min(TIMELINE_FLOOR_MS, minTime - paddingMs)
-      : minTime - paddingMs;
-    const upperAnchorMs = Math.max(maxTime, Date.now());
-    const futureBufferMs = hasEvents
-      ? Math.max(
-          paddingMs,
-          MIN_FUTURE_BUFFER_MS,
-          (upperAnchorMs - paddedMinMs) * FUTURE_BUFFER_RATIO,
-        )
-      : paddingMs;
+    const paddedMinMs = Math.min(TIMELINE_FLOOR_MS, minTime - paddingMs);
+    const upperAnchorMs = Math.max(maxTime, presentAnchorTime);
+    const futureBufferMs = Math.max(
+      paddingMs,
+      MIN_FUTURE_BUFFER_MS,
+      (upperAnchorMs - paddedMinMs) * FUTURE_BUFFER_RATIO,
+    );
     const paddedMaxMs = upperAnchorMs + futureBufferMs;
     const totalSpanMs = Math.max(msPerDay, paddedMaxMs - paddedMinMs);
 
@@ -703,100 +689,99 @@ export function ThreadCanvas({
     const totalHeight = calcHeight * verticalZoom;
     const scaledTimeScale = timeScale * verticalZoom;
     const getY = (timestamp: number) => (paddedMaxMs - timestamp) * scaledTimeScale;
+    const presentY = getY(presentAnchorTime);
 
     const rawGridLines: GridLine[] = [];
-    if (hasEvents) {
-      const viewportHeight = Math.max(420, viewportMetrics.height || 0);
-      const visibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
-      const visibleBottom = Math.min(
-        totalHeight,
-        viewportMetrics.scrollTop + viewportHeight + GRID_RENDER_BUFFER,
-      );
-      const visibleMaxMs = paddedMaxMs - visibleTop / scaledTimeScale;
-      const visibleMinMs = paddedMaxMs - visibleBottom / scaledTimeScale;
-      const pixelsPerYear = scaledTimeScale * approximateMsPerYear;
-      const pixelsPerMonth = scaledTimeScale * approximateMsPerMonth;
-      const pixelsPerDay = scaledTimeScale * msPerDay;
-      const pixelsPerHour = scaledTimeScale * msPerHour;
+    const viewportHeight = Math.max(420, viewportMetrics.height || 0);
+    const visibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
+    const visibleBottom = Math.min(
+      totalHeight,
+      viewportMetrics.scrollTop + viewportHeight + GRID_RENDER_BUFFER,
+    );
+    const visibleMaxMs = paddedMaxMs - visibleTop / scaledTimeScale;
+    const visibleMinMs = paddedMaxMs - visibleBottom / scaledTimeScale;
+    const pixelsPerYear = scaledTimeScale * approximateMsPerYear;
+    const pixelsPerMonth = scaledTimeScale * approximateMsPerMonth;
+    const pixelsPerDay = scaledTimeScale * msPerDay;
+    const pixelsPerHour = scaledTimeScale * msPerHour;
 
-      const yearStep = pixelsPerYear >= 28 ? 1 : pixelsPerYear >= 14 ? 2 : 5;
-      const showMonths = pixelsPerMonth >= 20;
-      const showDays = pixelsPerDay >= 12;
-      const hourStep = getHourStep(pixelsPerHour);
+    const yearStep = pixelsPerYear >= 28 ? 1 : pixelsPerYear >= 14 ? 2 : 5;
+    const showMonths = pixelsPerMonth >= 20;
+    const showDays = pixelsPerDay >= 12;
+    const hourStep = getHourStep(pixelsPerHour);
 
-      const yearStart = getStartOfYear(new Date(visibleMinMs));
-      const yearOffset = yearStart.getFullYear() % yearStep;
-      if (yearOffset !== 0) {
-        yearStart.setFullYear(yearStart.getFullYear() + (yearStep - yearOffset));
+    const yearStart = getStartOfYear(new Date(visibleMinMs));
+    const yearOffset = yearStart.getFullYear() % yearStep;
+    if (yearOffset !== 0) {
+      yearStart.setFullYear(yearStart.getFullYear() + (yearStep - yearOffset));
+    }
+
+    for (
+      let current = new Date(yearStart);
+      current.getTime() <= visibleMaxMs;
+      current.setFullYear(current.getFullYear() + yearStep)
+    ) {
+      if (current.getTime() >= paddedMinMs) {
+        rawGridLines.push({
+          label: formatGridLabelPart('year', current),
+          level: 'year',
+          time: current.getTime(),
+        });
       }
+    }
 
+    if (showMonths) {
+      const start = getStartOfMonth(new Date(visibleMinMs));
       for (
-        let current = new Date(yearStart);
+        let current = new Date(start);
         current.getTime() <= visibleMaxMs;
-        current.setFullYear(current.getFullYear() + yearStep)
+        current.setMonth(current.getMonth() + 1)
       ) {
         if (current.getTime() >= paddedMinMs) {
           rawGridLines.push({
-            label: formatGridLabelPart('year', current),
-            level: 'year',
+            label: formatGridLabelPart('month', current),
+            level: 'month',
             time: current.getTime(),
           });
         }
       }
+    }
 
-      if (showMonths) {
-        const start = getStartOfMonth(new Date(visibleMinMs));
-        for (
-          let current = new Date(start);
-          current.getTime() <= visibleMaxMs;
-          current.setMonth(current.getMonth() + 1)
-        ) {
-          if (current.getTime() >= paddedMinMs) {
-            rawGridLines.push({
-              label: formatGridLabelPart('month', current),
-              level: 'month',
-              time: current.getTime(),
-            });
-          }
+    if (showDays) {
+      const start = getStartOfDay(new Date(visibleMinMs));
+      for (
+        let current = new Date(start);
+        current.getTime() <= visibleMaxMs;
+        current.setDate(current.getDate() + 1)
+      ) {
+        if (current.getTime() >= paddedMinMs) {
+          rawGridLines.push({
+            label: formatGridLabelPart('day', current),
+            level: 'day',
+            time: current.getTime(),
+          });
         }
       }
+    }
 
-      if (showDays) {
-        const start = getStartOfDay(new Date(visibleMinMs));
-        for (
-          let current = new Date(start);
-          current.getTime() <= visibleMaxMs;
-          current.setDate(current.getDate() + 1)
-        ) {
-          if (current.getTime() >= paddedMinMs) {
-            rawGridLines.push({
-              label: formatGridLabelPart('day', current),
-              level: 'day',
-              time: current.getTime(),
-            });
-          }
-        }
+    if (hourStep) {
+      const start = getStartOfHour(new Date(visibleMinMs));
+      const remainder = start.getHours() % hourStep;
+      if (remainder !== 0) {
+        start.setHours(start.getHours() + (hourStep - remainder));
       }
 
-      if (hourStep) {
-        const start = getStartOfHour(new Date(visibleMinMs));
-        const remainder = start.getHours() % hourStep;
-        if (remainder !== 0) {
-          start.setHours(start.getHours() + (hourStep - remainder));
-        }
-
-        for (
-          let current = new Date(start);
-          current.getTime() <= visibleMaxMs;
-          current.setHours(current.getHours() + hourStep)
-        ) {
-          if (current.getTime() >= paddedMinMs) {
-            rawGridLines.push({
-              label: formatGridLabelPart('hour', current),
-              level: 'hour',
-              time: current.getTime(),
-            });
-          }
+      for (
+        let current = new Date(start);
+        current.getTime() <= visibleMaxMs;
+        current.setHours(current.getHours() + hourStep)
+      ) {
+        if (current.getTime() >= paddedMinMs) {
+          rawGridLines.push({
+            label: formatGridLabelPart('hour', current),
+            level: 'hour',
+            time: current.getTime(),
+          });
         }
       }
     }
@@ -937,12 +922,24 @@ export function ThreadCanvas({
       getY,
       gridLines,
       personColumns,
+      presentY,
       sideMargin,
       svgWidth,
       threadPositions: positions,
       totalHeight,
     };
-  }, [canvasWidth, people, events, verticalZoom, viewportMetrics]);
+  }, [canvasWidth, people, events, presentAnchorTime, verticalZoom, viewportMetrics]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || hasInitializedViewportRef.current || viewport.clientHeight === 0) {
+      return;
+    }
+
+    const maxScrollTop = Math.max(0, totalHeight - viewport.clientHeight);
+    viewport.scrollTop = clamp(presentY - viewport.clientHeight / 2, 0, maxScrollTop);
+    hasInitializedViewportRef.current = true;
+  }, [presentY, totalHeight]);
 
   return (
     <div
@@ -997,13 +994,13 @@ export function ThreadCanvas({
             </button>
             <button
               type="button"
-              onClick={() => setAnchoredVerticalZoom(1)}
-              disabled={verticalZoom === 1}
+              onClick={() => setAnchoredVerticalZoom(INITIAL_VERTICAL_ZOOM)}
+              disabled={Math.abs(verticalZoom - INITIAL_VERTICAL_ZOOM) < 0.001}
               className="rounded-full px-2 py-1 text-[11px] text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Reset timeline vertical zoom"
               title="Reset zoom"
             >
-              {Math.round(verticalZoom * 100)}%
+              {getDisplayedZoomPercent(verticalZoom)}%
             </button>
             <button
               type="button"
@@ -1290,7 +1287,7 @@ export function ThreadCanvas({
             {events.length === 0 && people.length === 0 && (
               <text
                 x="50%"
-                y={totalHeight / 2}
+                y={presentY}
                 textAnchor="middle"
                 fill="#94a3b8"
                 fontSize="16"
