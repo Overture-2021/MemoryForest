@@ -1,8 +1,11 @@
 # Memory Forest
 
+> “The past is never dead. It’s not even past.”  
+> — William Faulkner
+
 Memory Forest is a frontend prototype for exploring shared memories and group activities as connected timeline threads.
 
-The current in-app name, `ThreadMemories`, is a temporary development name. Treat `Memory Forest` as the project name and `ThreadMemories` as the working label used in the UI while the prototype evolves.
+The current in-app name, `ThreadMemories`, is a temporary development name. 
 
 ## What The App Does
 
@@ -68,7 +71,5 @@ Create a production build:
 npm run build
 ```
 
-## Notes
 
-- The repo appears to have been exported from Figma Make and includes a broader generated UI component set than the app currently uses.
-- There is no test suite configured at the moment.
+
