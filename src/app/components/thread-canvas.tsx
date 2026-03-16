@@ -9,6 +9,8 @@ interface ThreadCanvasProps {
 
 const msPerDay = 24 * 60 * 60 * 1000;
 const MIN_CANVAS_WIDTH = 280;
+const EVENT_NODE_RADIUS = 8;
+const EVENT_NODE_GAP = 6;
 const EVENT_LABEL_MARGIN = 12;
 const EVENT_LABEL_GAP = 10;
 const EVENT_LABEL_HORIZONTAL_PADDING = 12;
@@ -272,6 +274,100 @@ function getThreadTagLayout(id: string, x: number, y: number, svgWidth: number, 
   };
 }
 
+function getSharedEventX(
+  participantPositions: number[],
+  personThreadPositions: number[],
+  fallbackX: number,
+) {
+  if (participantPositions.length <= 1) {
+    return participantPositions[0] ?? fallbackX;
+  }
+
+  const sortedParticipants = [...participantPositions].sort((a, b) => a - b);
+  const centroid =
+    sortedParticipants.reduce((sum, position) => sum + position, 0) / sortedParticipants.length;
+  const spanStart = sortedParticipants[0];
+  const spanEnd = sortedParticipants[sortedParticipants.length - 1];
+  const sortedThreads = [...personThreadPositions].sort((a, b) => a - b);
+
+  const gapCenters: number[] = [];
+  for (let index = 0; index < sortedThreads.length - 1; index += 1) {
+    const left = sortedThreads[index];
+    const right = sortedThreads[index + 1];
+    const gapStart = Math.max(left, spanStart);
+    const gapEnd = Math.min(right, spanEnd);
+
+    if (gapEnd - gapStart > 1) {
+      gapCenters.push((gapStart + gapEnd) / 2);
+    }
+  }
+
+  if (gapCenters.length > 0) {
+    return gapCenters.reduce((closest, current) =>
+      Math.abs(current - centroid) < Math.abs(closest - centroid) ? current : closest,
+    );
+  }
+
+  const leftNeighbor = [...sortedThreads].reverse().find((threadX) => threadX < centroid);
+  const rightNeighbor = sortedThreads.find((threadX) => threadX > centroid);
+
+  if (leftNeighbor !== undefined && rightNeighbor !== undefined) {
+    return (leftNeighbor + rightNeighbor) / 2;
+  }
+
+  return fallbackX;
+}
+
+function resolveHorizontalEventNodeCollisions<
+  T extends {
+    event: Event;
+    x: number;
+    y: number;
+  },
+>(nodes: T[], minX: number, maxX: number) {
+  const minimumSeparation = EVENT_NODE_RADIUS * 2 + EVENT_NODE_GAP;
+  const resolvedXById = new Map<string, number>();
+  const nodesByTimestamp = new Map<number, T[]>();
+
+  for (const node of nodes) {
+    const timestampNodes = nodesByTimestamp.get(node.event.timestamp) ?? [];
+    timestampNodes.push(node);
+    nodesByTimestamp.set(node.event.timestamp, timestampNodes);
+  }
+
+  for (const timestampNodes of nodesByTimestamp.values()) {
+    const sortedNodes = [...timestampNodes].sort((a, b) => a.x - b.x || a.event.id.localeCompare(b.event.id));
+
+    let clusterStart = 0;
+    while (clusterStart < sortedNodes.length) {
+      let clusterEnd = clusterStart + 1;
+      while (
+        clusterEnd < sortedNodes.length &&
+        sortedNodes[clusterEnd].x - sortedNodes[clusterEnd - 1].x < minimumSeparation
+      ) {
+        clusterEnd += 1;
+      }
+
+      const cluster = sortedNodes.slice(clusterStart, clusterEnd);
+      const clusterWidth = minimumSeparation * (cluster.length - 1);
+      const anchorCenter = cluster.reduce((sum, node) => sum + node.x, 0) / cluster.length;
+      const unclampedStartX = anchorCenter - clusterWidth / 2;
+      const startX = clamp(unclampedStartX, minX, Math.max(minX, maxX - clusterWidth));
+
+      cluster.forEach((node, index) => {
+        resolvedXById.set(node.event.id, startX + index * minimumSeparation);
+      });
+
+      clusterStart = clusterEnd;
+    }
+  }
+
+  return nodes.map((node) => ({
+    ...node,
+    x: resolvedXById.get(node.event.id) ?? node.x,
+  }));
+}
+
 export function ThreadCanvas({
   people,
   events,
@@ -443,6 +539,9 @@ export function ThreadCanvas({
         sideMargin + (columns.length === 1 ? availableWidth / 2 : index * spacing),
       );
     });
+    const personThreadPositions = personColumns
+      .map((col) => positions.get(col.id))
+      .filter((position): position is number => position !== undefined);
 
     const eventThreadRanges = new Map<string, { minY: number; maxY: number }>();
     Array.from(eventThreads).forEach((tid) => {
@@ -469,28 +568,41 @@ export function ThreadCanvas({
           .filter((position): position is number => position !== undefined);
         x =
           personPositions.length > 0
-            ? personPositions.reduce((sum, position) => sum + position, 0) / personPositions.length
+            ? getSharedEventX(
+                personPositions,
+                personThreadPositions,
+                sideMargin + availableWidth / 2,
+              )
             : sideMargin + availableWidth / 2;
       }
 
       return {
         event,
-        labelLayout: getEventLabelLayout(
-          x,
-          y,
-          svgWidth,
-          event.title,
-          event.interpretation,
-          event.timestamp,
-          event.personIds.length,
-        ),
         x,
         y,
       };
     });
 
+    const positionedEventNodes = resolveHorizontalEventNodeCollisions(
+      eventNodes,
+      EVENT_NODE_RADIUS + 4,
+      svgWidth - EVENT_NODE_RADIUS - 12,
+    );
+    const eventNodesWithLabels = positionedEventNodes.map((node) => ({
+      ...node,
+      labelLayout: getEventLabelLayout(
+        node.x,
+        node.y,
+        svgWidth,
+        node.event.title,
+        node.event.interpretation,
+        node.event.timestamp,
+        node.event.personIds.length,
+      ),
+    }));
+
     const resolvedLabelLayouts = resolveVerticalCollisions(
-      eventNodes.map(({ event, labelLayout }) => ({
+      eventNodesWithLabels.map(({ event, labelLayout }) => ({
         ...labelLayout,
         id: event.id,
       })),
@@ -499,7 +611,7 @@ export function ThreadCanvas({
       EVENT_LABEL_GAP,
     );
     const labelByEventId = new Map(resolvedLabelLayouts.map((layout) => [layout.id, layout]));
-    const positionedEventNodes = eventNodes.map((node) => ({
+    const finalizedEventNodes = eventNodesWithLabels.map((node) => ({
       ...node,
       labelLayout: labelByEventId.get(node.event.id) ?? node.labelLayout,
     }));
@@ -522,7 +634,7 @@ export function ThreadCanvas({
 
     return {
       allColumns: columns,
-      eventNodes: positionedEventNodes,
+      eventNodes: finalizedEventNodes,
       eventThreadColumns,
       eventThreadColorById,
       eventThreadTags,

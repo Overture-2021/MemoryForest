@@ -29,55 +29,55 @@ interface EventDetailsSheetProps {
 export function EventDetailsSheet({ open, onOpenChange, event, people, onEdit, onDelete }: EventDetailsSheetProps) {
   if (!event) return null;
 
-  const involvedPeople = people.filter(p => event.personIds.includes(p.id));
+  const involvedPeople = people.filter((p) => event.personIds.includes(p.id));
   const eventDate = new Date(event.timestamp);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
+        <SheetHeader className="border-b border-slate-200 px-6 py-6 pr-14">
+          <SheetTitle className="flex items-start gap-3 text-left text-xl leading-tight">
             <div
-              className="w-4 h-4 rounded-full"
+              className="mt-1 h-4 w-4 shrink-0 rounded-full"
               style={{ backgroundColor: event.color }}
             />
-            {event.title}
+            <span>{event.title}</span>
           </SheetTitle>
         </SheetHeader>
-        
-        <div className="mt-6 space-y-6">
+
+        <div className="space-y-6 px-6 py-6">
           {/* Timestamp */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Calendar className="w-4 h-4" />
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <Calendar className="h-4 w-4 shrink-0" />
               <span>Time</span>
             </div>
-            <p className="text-sm pl-6">
+            <p className="pl-6 text-sm leading-6 text-slate-800">
               {eventDate.toLocaleString('en-US', {
                 month: 'long',
                 day: 'numeric',
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
               })}
             </p>
           </div>
 
           {/* People involved */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Users className="w-4 h-4" />
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <Users className="h-4 w-4 shrink-0" />
               <span>People Involved</span>
             </div>
             <div className="flex flex-wrap gap-2 pl-6">
-              {involvedPeople.map(person => (
+              {involvedPeople.map((person) => (
                 <Badge
                   key={person.id}
                   variant="outline"
-                  className="gap-2"
+                  className="gap-2 rounded-full border-slate-300 bg-white px-3 py-1 text-sm"
                 >
-                  <div
-                    className="w-2 h-2 rounded-full"
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: person.color }}
                   />
                   {person.name}
@@ -88,12 +88,12 @@ export function EventDetailsSheet({ open, onOpenChange, event, people, onEdit, o
 
           {/* Thread ID */}
           {event.threadId && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Tag className="w-4 h-4" />
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                <Tag className="h-4 w-4 shrink-0" />
                 <span>Event Thread</span>
               </div>
-              <p className="text-sm pl-6 font-mono bg-slate-100 rounded px-2 py-1 inline-block">
+              <p className="inline-flex max-w-full items-center overflow-hidden rounded-lg bg-white px-3 py-1.5 pl-6 font-mono text-sm text-slate-700 shadow-sm ring-1 ring-slate-200">
                 {event.threadId}
               </p>
             </div>
@@ -101,26 +101,26 @@ export function EventDetailsSheet({ open, onOpenChange, event, people, onEdit, o
 
           {/* Interpretation */}
           {event.interpretation && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <MessageSquare className="w-4 h-4" />
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                <MessageSquare className="h-4 w-4 shrink-0" />
                 <span>Interpretation</span>
               </div>
-              <p className="text-sm pl-6 italic text-slate-700">
+              <p className="pl-6 text-sm italic leading-6 text-slate-700">
                 "{event.interpretation}"
               </p>
             </div>
           )}
 
           {/* Color */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <div className="w-4 h-4" /> {/* Spacer */}
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <div className="h-4 w-4 shrink-0" />
               <span>Event Color</span>
             </div>
-            <div className="pl-6 flex items-center gap-2">
+            <div className="flex items-center gap-3 pl-6">
               <div
-                className="w-8 h-8 rounded-md border-2 border-slate-200"
+                className="h-8 w-8 shrink-0 rounded-md border-2 border-slate-200"
                 style={{ backgroundColor: event.color }}
               />
               <span className="text-xs font-mono text-slate-500">{event.color}</span>
@@ -130,23 +130,23 @@ export function EventDetailsSheet({ open, onOpenChange, event, people, onEdit, o
           <Separator />
 
           {/* Actions */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Button
               onClick={() => onEdit?.(event)}
-              className="w-full justify-start"
+              className="h-11 w-full justify-start px-4"
               variant="outline"
             >
-              <Pencil className="w-4 h-4 mr-2" />
+              <Pencil className="mr-2 h-4 w-4 shrink-0" />
               Edit Event
             </Button>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
-                  className="w-full justify-start"
+                  className="h-11 w-full justify-start px-4"
                   variant="outline"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4 shrink-0" />
                   Delete Event
                 </Button>
               </AlertDialogTrigger>
