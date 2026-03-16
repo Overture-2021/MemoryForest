@@ -12,6 +12,8 @@ const msPerHour = 60 * 60 * 1000;
 const approximateMsPerMonth = 30.44 * msPerDay;
 const approximateMsPerYear = 365.25 * msPerDay;
 const TIMELINE_FLOOR_MS = new Date(1900, 0, 1).getTime();
+const MIN_FUTURE_BUFFER_MS = 10 * approximateMsPerYear;
+const FUTURE_BUFFER_RATIO = 0.15;
 const MIN_CANVAS_WIDTH = 280;
 const MIN_VERTICAL_ZOOM = 0.5;
 const MAX_VERTICAL_ZOOM = 320;
@@ -676,7 +678,15 @@ export function ThreadCanvas({
     const paddedMinMs = hasEvents
       ? Math.min(TIMELINE_FLOOR_MS, minTime - paddingMs)
       : minTime - paddingMs;
-    const paddedMaxMs = maxTime + paddingMs;
+    const upperAnchorMs = Math.max(maxTime, Date.now());
+    const futureBufferMs = hasEvents
+      ? Math.max(
+          paddingMs,
+          MIN_FUTURE_BUFFER_MS,
+          (upperAnchorMs - paddedMinMs) * FUTURE_BUFFER_RATIO,
+        )
+      : paddingMs;
+    const paddedMaxMs = upperAnchorMs + futureBufferMs;
     const totalSpanMs = Math.max(msPerDay, paddedMaxMs - paddedMinMs);
 
     let timeScale = 20 / msPerDay;
