@@ -654,6 +654,8 @@ export function ThreadCanvas({
     gridLines,
     eventThreadRanges,
     presentY,
+    scrollRangeEnd,
+    scrollRangeStart,
   } = useMemo(() => {
     const svgWidth = Math.max(MIN_CANVAS_WIDTH, canvasWidth);
     const sideMargin = clamp(svgWidth * 0.08, 52, 100);
@@ -690,9 +692,14 @@ export function ThreadCanvas({
     const scaledTimeScale = timeScale * verticalZoom;
     const getY = (timestamp: number) => (paddedMaxMs - timestamp) * scaledTimeScale;
     const presentY = getY(presentAnchorTime);
+    const viewportHeight = Math.max(420, viewportMetrics.height || 0);
+    const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+    const latestRelevantY = hasEvents ? getY(maxTime) : presentY;
+    const earliestRelevantY = hasEvents ? getY(minTime) : presentY;
+    const scrollRangeStart = clamp(latestRelevantY - viewportHeight / 2, 0, maxScrollTop);
+    const scrollRangeEnd = clamp(earliestRelevantY - viewportHeight / 2, 0, maxScrollTop);
 
     const rawGridLines: GridLine[] = [];
-    const viewportHeight = Math.max(420, viewportMetrics.height || 0);
     const visibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
     const visibleBottom = Math.min(
       totalHeight,
@@ -923,6 +930,8 @@ export function ThreadCanvas({
       gridLines,
       personColumns,
       presentY,
+      scrollRangeEnd,
+      scrollRangeStart,
       sideMargin,
       svgWidth,
       threadPositions: positions,
@@ -936,10 +945,21 @@ export function ThreadCanvas({
       return;
     }
 
-    const maxScrollTop = Math.max(0, totalHeight - viewport.clientHeight);
-    viewport.scrollTop = clamp(presentY - viewport.clientHeight / 2, 0, maxScrollTop);
+    viewport.scrollTop = clamp(presentY - viewport.clientHeight / 2, scrollRangeStart, scrollRangeEnd);
     hasInitializedViewportRef.current = true;
-  }, [presentY, totalHeight]);
+  }, [presentY, scrollRangeEnd, scrollRangeStart]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || viewport.clientHeight === 0) {
+      return;
+    }
+
+    const clampedScrollTop = clamp(viewport.scrollTop, scrollRangeStart, scrollRangeEnd);
+    if (Math.abs(clampedScrollTop - viewport.scrollTop) > 0.5) {
+      viewport.scrollTop = clampedScrollTop;
+    }
+  }, [scrollRangeEnd, scrollRangeStart]);
 
   return (
     <div
