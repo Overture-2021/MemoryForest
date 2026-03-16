@@ -114,7 +114,7 @@ export default function App() {
   const usedColors = people.map((p) => p.color);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
       <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -144,9 +144,9 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-1 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="grid w-full gap-4 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:gap-6">
-          <aside className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 xl:content-start">
+      <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+        <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:gap-6">
+          <aside className="grid min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-1 xl:content-start">
             <Card className="p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-700">Actions</h3>
               <div className="space-y-2">
@@ -203,13 +203,15 @@ export default function App() {
                 <p>- Vertical lines = threads (people or events)</p>
                 <p>- Dots = event nodes</p>
                 <p>- Time flows bottom to top</p>
+                <p>- Scroll the canvas to move through time</p>
+                <p>- Use +/- or Ctrl/Cmd + wheel to zoom vertically</p>
                 <p>- Lines connect threads to shared events</p>
                 <p>- Click events to view details</p>
               </div>
             </Card>
           </aside>
 
-          <div className="min-h-[420px] xl:min-h-0 xl:h-full">
+          <div className="min-h-[420px] min-w-0 xl:h-full xl:min-h-0">
             <ThreadCanvas people={people} events={events} onEventClick={handleEventClick} />
           </div>
         </div>

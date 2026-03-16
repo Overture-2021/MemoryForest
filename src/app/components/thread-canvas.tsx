@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Person, Event } from '../types/thread-memories';
 
 interface ThreadCanvasProps {
@@ -8,7 +8,14 @@ interface ThreadCanvasProps {
 }
 
 const msPerDay = 24 * 60 * 60 * 1000;
+const msPerHour = 60 * 60 * 1000;
+const approximateMsPerMonth = 30.44 * msPerDay;
+const approximateMsPerYear = 365.25 * msPerDay;
+const TIMELINE_FLOOR_MS = new Date(1900, 0, 1).getTime();
 const MIN_CANVAS_WIDTH = 280;
+const MIN_VERTICAL_ZOOM = 0.5;
+const MAX_VERTICAL_ZOOM = 320;
+const ZOOM_STEP = 1.2;
 const EVENT_NODE_RADIUS = 8;
 const EVENT_NODE_GAP = 6;
 const EVENT_LABEL_MARGIN = 12;
@@ -20,6 +27,7 @@ const EVENT_LABEL_META_LINE_HEIGHT = 12;
 const EVENT_LABEL_SECTION_GAP = 6;
 const EVENT_TAG_HEIGHT = 22;
 const EVENT_TAG_GAP = 8;
+const GRID_RENDER_BUFFER = 240;
 
 interface BoxLayout {
   height: number;
@@ -52,6 +60,15 @@ interface EventThreadTagLayout {
   y: number;
 }
 
+type GridLineLevel = 'year' | 'month' | 'day' | 'hour';
+const GRID_LABEL_PART_ORDER: GridLineLevel[] = ['hour', 'day', 'month', 'year'];
+
+interface GridLine {
+  label: string;
+  level: GridLineLevel;
+  time: number;
+}
+
 function getPersonEventConnectorPath(
   threadX: number,
   eventX: number,
@@ -70,6 +87,121 @@ function getPersonEventConnectorPath(
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getStartOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getStartOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function getStartOfYear(date: Date) {
+  return new Date(date.getFullYear(), 0, 1);
+}
+
+function getStartOfHour(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
+}
+
+function getHourStep(pixelsPerHour: number) {
+  if (pixelsPerHour >= 32) return 1;
+  if (pixelsPerHour * 3 >= 28) return 3;
+  if (pixelsPerHour * 6 >= 22) return 6;
+  if (pixelsPerHour * 12 >= 18) return 12;
+  return null;
+}
+
+function getGridLineStyle(level: GridLineLevel) {
+  switch (level) {
+    case 'year':
+      return {
+        fontSize: 12,
+        fontWeight: 600,
+        stroke: '#cbd5e1',
+        strokeDasharray: undefined,
+        textFill: '#475569',
+      };
+    case 'month':
+      return {
+        fontSize: 11,
+        fontWeight: 600,
+        stroke: '#dbeafe',
+        strokeDasharray: '6,4',
+        textFill: '#64748b',
+      };
+    case 'day':
+      return {
+        fontSize: 10,
+        fontWeight: 500,
+        stroke: '#e2e8f0',
+        strokeDasharray: '4,4',
+        textFill: '#94a3b8',
+      };
+    case 'hour':
+      return {
+        fontSize: 10,
+        fontWeight: 500,
+        stroke: '#f1f5f9',
+        strokeDasharray: '2,6',
+        textFill: '#94a3b8',
+      };
+  }
+}
+
+function getGridLinePriority(level: GridLineLevel) {
+  switch (level) {
+    case 'year':
+      return 0;
+    case 'month':
+      return 1;
+    case 'day':
+      return 2;
+    case 'hour':
+      return 3;
+  }
+}
+
+function formatGridLabelPart(level: GridLineLevel, date: Date) {
+  switch (level) {
+    case 'year':
+      return date.getFullYear().toString();
+    case 'month':
+      return date.toLocaleDateString(undefined, { month: 'short' });
+    case 'day':
+      return date.getDate().toString();
+    case 'hour':
+      return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+  }
+}
+
+function mergeGridLines(lines: GridLine[]) {
+  const grouped = new Map<number, Map<GridLineLevel, string>>();
+
+  for (const line of lines) {
+    const parts = grouped.get(line.time) ?? new Map<GridLineLevel, string>();
+    parts.set(line.level, line.label);
+    grouped.set(line.time, parts);
+  }
+
+  return Array.from(grouped.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([time, parts]) => {
+      const levels = Array.from(parts.keys());
+      const level = levels.reduce((dominant, current) =>
+        getGridLinePriority(current) < getGridLinePriority(dominant) ? current : dominant,
+      );
+      const label = GRID_LABEL_PART_ORDER.filter((partLevel) => parts.has(partLevel))
+        .map((partLevel) => parts.get(partLevel))
+        .join(', ');
+
+      return {
+        label,
+        level,
+        time,
+      };
+    });
 }
 
 function truncateText(text: string, maxChars: number) {
@@ -374,7 +506,18 @@ export function ThreadCanvas({
   onEventClick,
 }: ThreadCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const pendingZoomAnchorRef = useRef<{
+    anchorOffset: number;
+    anchorRatio: number;
+    zoom: number;
+  } | null>(null);
   const [canvasWidth, setCanvasWidth] = useState(1200);
+  const [verticalZoom, setVerticalZoom] = useState(1);
+  const [viewportMetrics, setViewportMetrics] = useState({
+    height: 0,
+    scrollTop: 0,
+  });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -397,6 +540,95 @@ export function ThreadCanvas({
 
     return () => observer.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const pendingZoomAnchor = pendingZoomAnchorRef.current;
+    if (!viewport || !pendingZoomAnchor || pendingZoomAnchor.zoom !== verticalZoom) {
+      return;
+    }
+
+    const nextScrollHeight = Math.max(1, viewport.scrollHeight);
+    const maxScrollTop = Math.max(0, nextScrollHeight - viewport.clientHeight);
+    const nextScrollTop = pendingZoomAnchor.anchorRatio * nextScrollHeight - pendingZoomAnchor.anchorOffset;
+
+    viewport.scrollTop = clamp(nextScrollTop, 0, maxScrollTop);
+    pendingZoomAnchorRef.current = null;
+  }, [verticalZoom]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateViewportMetrics = () => {
+      setViewportMetrics((current) => {
+        const next = {
+          height: viewport.clientHeight,
+          scrollTop: viewport.scrollTop,
+        };
+
+        if (current.height === next.height && current.scrollTop === next.scrollTop) {
+          return current;
+        }
+
+        return next;
+      });
+    };
+
+    updateViewportMetrics();
+
+    viewport.addEventListener('scroll', updateViewportMetrics, { passive: true });
+
+    const observer = new ResizeObserver(() => {
+      updateViewportMetrics();
+    });
+
+    observer.observe(viewport);
+
+    return () => {
+      viewport.removeEventListener('scroll', updateViewportMetrics);
+      observer.disconnect();
+    };
+  }, []);
+
+  const setAnchoredVerticalZoom = (nextZoom: number, anchorClientY?: number) => {
+    const clampedZoom = clamp(Number(nextZoom.toFixed(3)), MIN_VERTICAL_ZOOM, MAX_VERTICAL_ZOOM);
+    if (clampedZoom === verticalZoom) {
+      return;
+    }
+
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      setVerticalZoom(clampedZoom);
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const anchorOffset =
+      anchorClientY === undefined
+        ? viewport.clientHeight / 2
+        : clamp(anchorClientY - rect.top, 0, viewport.clientHeight);
+    const currentScrollHeight = Math.max(1, viewport.scrollHeight);
+    const anchorPosition = viewport.scrollTop + anchorOffset;
+
+    pendingZoomAnchorRef.current = {
+      anchorOffset,
+      anchorRatio: anchorPosition / currentScrollHeight,
+      zoom: clampedZoom,
+    };
+    setVerticalZoom(clampedZoom);
+  };
+
+  const handleViewportWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const zoomFactor = Math.exp(-event.deltaY * 0.0015);
+    setAnchoredVerticalZoom(verticalZoom * zoomFactor, event.clientY);
+  };
 
   const {
     sideMargin,
@@ -441,9 +673,11 @@ export function ThreadCanvas({
     const maxTime = hasEvents ? Math.max(...timestamps) : Date.now();
     const timeSpanMs = maxTime - minTime;
     const paddingMs = Math.max(7 * msPerDay, timeSpanMs * 0.1);
-    const paddedMinMs = minTime - paddingMs;
+    const paddedMinMs = hasEvents
+      ? Math.min(TIMELINE_FLOOR_MS, minTime - paddingMs)
+      : minTime - paddingMs;
     const paddedMaxMs = maxTime + paddingMs;
-    const totalSpanMs = paddedMaxMs - paddedMinMs;
+    const totalSpanMs = Math.max(msPerDay, paddedMaxMs - paddedMinMs);
 
     let timeScale = 20 / msPerDay;
     let calcHeight = totalSpanMs * timeScale;
@@ -456,57 +690,108 @@ export function ThreadCanvas({
       calcHeight = 800;
     }
 
-    const totalHeight = calcHeight;
-    const getY = (timestamp: number) => (paddedMaxMs - timestamp) * timeScale;
+    const totalHeight = calcHeight * verticalZoom;
+    const scaledTimeScale = timeScale * verticalZoom;
+    const getY = (timestamp: number) => (paddedMaxMs - timestamp) * scaledTimeScale;
 
-    const gridLines: { time: number; label: string }[] = [];
+    const rawGridLines: GridLine[] = [];
     if (hasEvents) {
-      const days = totalSpanMs / msPerDay;
-      const minDate = new Date(paddedMinMs);
+      const viewportHeight = Math.max(420, viewportMetrics.height || 0);
+      const visibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
+      const visibleBottom = Math.min(
+        totalHeight,
+        viewportMetrics.scrollTop + viewportHeight + GRID_RENDER_BUFFER,
+      );
+      const visibleMaxMs = paddedMaxMs - visibleTop / scaledTimeScale;
+      const visibleMinMs = paddedMaxMs - visibleBottom / scaledTimeScale;
+      const pixelsPerYear = scaledTimeScale * approximateMsPerYear;
+      const pixelsPerMonth = scaledTimeScale * approximateMsPerMonth;
+      const pixelsPerDay = scaledTimeScale * msPerDay;
+      const pixelsPerHour = scaledTimeScale * msPerHour;
 
-      if (days <= 60) {
-        const start = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
-        for (let d = new Date(start); d.getTime() <= paddedMaxMs; d.setDate(d.getDate() + 1)) {
-          if (d.getTime() >= paddedMinMs) {
-            gridLines.push({
-              time: d.getTime(),
-              label: d.toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-              }),
-            });
-          }
+      const yearStep = pixelsPerYear >= 28 ? 1 : pixelsPerYear >= 14 ? 2 : 5;
+      const showMonths = pixelsPerMonth >= 20;
+      const showDays = pixelsPerDay >= 12;
+      const hourStep = getHourStep(pixelsPerHour);
+
+      const yearStart = getStartOfYear(new Date(visibleMinMs));
+      const yearOffset = yearStart.getFullYear() % yearStep;
+      if (yearOffset !== 0) {
+        yearStart.setFullYear(yearStart.getFullYear() + (yearStep - yearOffset));
+      }
+
+      for (
+        let current = new Date(yearStart);
+        current.getTime() <= visibleMaxMs;
+        current.setFullYear(current.getFullYear() + yearStep)
+      ) {
+        if (current.getTime() >= paddedMinMs) {
+          rawGridLines.push({
+            label: formatGridLabelPart('year', current),
+            level: 'year',
+            time: current.getTime(),
+          });
         }
-      } else if (days <= 730) {
-        const start = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-        for (let d = new Date(start); d.getTime() <= paddedMaxMs; d.setMonth(d.getMonth() + 1)) {
-          if (d.getTime() >= paddedMinMs) {
-            gridLines.push({
-              time: d.getTime(),
-              label: d.toLocaleDateString(undefined, {
-                month: 'short',
-                year: 'numeric',
-              }),
-            });
-          }
-        }
-      } else {
-        const start = new Date(minDate.getFullYear(), 0, 1);
+      }
+
+      if (showMonths) {
+        const start = getStartOfMonth(new Date(visibleMinMs));
         for (
-          let d = new Date(start);
-          d.getTime() <= paddedMaxMs;
-          d.setFullYear(d.getFullYear() + 1)
+          let current = new Date(start);
+          current.getTime() <= visibleMaxMs;
+          current.setMonth(current.getMonth() + 1)
         ) {
-          if (d.getTime() >= paddedMinMs) {
-            gridLines.push({
-              time: d.getTime(),
-              label: d.getFullYear().toString(),
+          if (current.getTime() >= paddedMinMs) {
+            rawGridLines.push({
+              label: formatGridLabelPart('month', current),
+              level: 'month',
+              time: current.getTime(),
+            });
+          }
+        }
+      }
+
+      if (showDays) {
+        const start = getStartOfDay(new Date(visibleMinMs));
+        for (
+          let current = new Date(start);
+          current.getTime() <= visibleMaxMs;
+          current.setDate(current.getDate() + 1)
+        ) {
+          if (current.getTime() >= paddedMinMs) {
+            rawGridLines.push({
+              label: formatGridLabelPart('day', current),
+              level: 'day',
+              time: current.getTime(),
+            });
+          }
+        }
+      }
+
+      if (hourStep) {
+        const start = getStartOfHour(new Date(visibleMinMs));
+        const remainder = start.getHours() % hourStep;
+        if (remainder !== 0) {
+          start.setHours(start.getHours() + (hourStep - remainder));
+        }
+
+        for (
+          let current = new Date(start);
+          current.getTime() <= visibleMaxMs;
+          current.setHours(current.getHours() + hourStep)
+        ) {
+          if (current.getTime() >= paddedMinMs) {
+            rawGridLines.push({
+              label: formatGridLabelPart('hour', current),
+              level: 'hour',
+              time: current.getTime(),
             });
           }
         }
       }
     }
 
+    const gridLines = mergeGridLines(rawGridLines);
     const positions = new Map<string, number>();
     const eventThreads = new Set(events.map((e) => e.threadId).filter(Boolean) as string[]);
     const columns = [
@@ -647,41 +932,80 @@ export function ThreadCanvas({
       threadPositions: positions,
       totalHeight,
     };
-  }, [canvasWidth, people, events]);
+  }, [canvasWidth, people, events, verticalZoom, viewportMetrics]);
 
   return (
     <div
       ref={containerRef}
-      className="h-full min-h-[420px] w-full overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+      className="flex h-full min-h-[420px] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
     >
-      <div className="relative flex min-h-full flex-col">
-        <div className="sticky top-0 z-20 h-[60px] w-full shrink-0 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
-          {personColumns.map((col) => {
-            const x = threadPositions.get(col.id);
-            if (x === undefined) return null;
+      <div className="relative z-20 h-[60px] w-full shrink-0 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
+        {personColumns.map((col) => {
+          const x = threadPositions.get(col.id);
+          if (x === undefined) return null;
 
-            return (
+          return (
+            <div
+              key={col.id}
+              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-transform"
+              style={{ left: x }}
+            >
               <div
-                key={col.id}
-                className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-transform"
-                style={{ left: x }}
+                className="mb-1.5 h-3 w-3 shadow-sm"
+                style={{
+                  backgroundColor: col.color,
+                  borderRadius: '50%',
+                }}
+              />
+              <span
+                className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"
+                style={{ backgroundColor: col.color }}
               >
-                <div
-                  className="mb-1.5 h-3 w-3 shadow-sm"
-                  style={{
-                    backgroundColor: col.color,
-                    borderRadius: '50%',
-                  }}
-                />
-                <span
-                  className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"
-                  style={{ backgroundColor: col.color }}
-                >
-                  {col.name}
-                </span>
-              </div>
-            );
-          })}
+                {col.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        ref={viewportRef}
+        className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        onWheel={handleViewportWheel}
+      >
+        <div className="sticky top-3 z-20 ml-auto mr-3 mt-3 flex h-0 w-fit justify-end">
+          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setAnchoredVerticalZoom(verticalZoom / ZOOM_STEP)}
+              disabled={verticalZoom <= MIN_VERTICAL_ZOOM}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Zoom out timeline vertically"
+              title="Zoom out"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnchoredVerticalZoom(1)}
+              disabled={verticalZoom === 1}
+              className="rounded-full px-2 py-1 text-[11px] text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Reset timeline vertical zoom"
+              title="Reset zoom"
+            >
+              {Math.round(verticalZoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnchoredVerticalZoom(verticalZoom * ZOOM_STEP)}
+              disabled={verticalZoom >= MAX_VERTICAL_ZOOM}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Zoom in timeline vertically"
+              title="Zoom in"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <div className="relative" style={{ height: totalHeight }}>
@@ -692,26 +1016,27 @@ export function ThreadCanvas({
             preserveAspectRatio="none"
             className="absolute inset-0"
           >
-            {gridLines.map((line, index) => {
+            {gridLines.map((line) => {
               const y = getY(line.time);
+              const style = getGridLineStyle(line.level);
               return (
-                <g key={`grid-${index}`}>
+                <g key={`grid-${line.level}-${line.time}`}>
                   <line
                     x1={Math.max(12, sideMargin - 20)}
                     y1={y}
                     x2={svgWidth - 12}
                     y2={y}
-                    stroke="#e2e8f0"
+                    stroke={style.stroke}
                     strokeWidth="1"
-                    strokeDasharray="4,4"
+                    strokeDasharray={style.strokeDasharray}
                   />
                   <text
-                    x={Math.max(8, sideMargin - 30)}
+                    x={Math.max(18, sideMargin - 6)}
                     y={y + 4}
-                    textAnchor="end"
-                    fill="#64748b"
-                    fontSize="12"
-                    fontWeight="500"
+                    textAnchor="start"
+                    fill={style.textFill}
+                    fontSize={style.fontSize}
+                    fontWeight={style.fontWeight}
                     className="pointer-events-none select-none"
                   >
                     {line.label}
