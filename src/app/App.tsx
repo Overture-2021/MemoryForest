@@ -110,6 +110,46 @@ export default function App() {
     setShowEventDetails(false);
   };
 
+  const renameThreadId = (currentThreadId: string, nextThreadId: string) => {
+    const normalizedCurrentThreadId = currentThreadId.trim();
+    const normalizedNextThreadId = nextThreadId.trim();
+
+    if (
+      normalizedCurrentThreadId.length === 0 ||
+      normalizedNextThreadId.length === 0 ||
+      normalizedCurrentThreadId === normalizedNextThreadId
+    ) {
+      return;
+    }
+
+    setEvents((currentEvents) =>
+      currentEvents.map((event) =>
+        event.threadId === normalizedCurrentThreadId
+          ? {
+              ...event,
+              threadId: normalizedNextThreadId,
+            }
+          : event,
+      ),
+    );
+    setSelectedEvent((currentEvent) =>
+      currentEvent?.threadId === normalizedCurrentThreadId
+        ? {
+            ...currentEvent,
+            threadId: normalizedNextThreadId,
+          }
+        : currentEvent,
+    );
+    setEditingEvent((currentEvent) =>
+      currentEvent?.threadId === normalizedCurrentThreadId
+        ? {
+            ...currentEvent,
+            threadId: normalizedNextThreadId,
+          }
+        : currentEvent,
+    );
+  };
+
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
     setShowEventDetails(true);
@@ -254,9 +294,11 @@ export default function App() {
         open={showEventDetails}
         onOpenChange={setShowEventDetails}
         event={selectedEvent}
+        events={events}
         people={people}
         onEdit={handleEditEvent}
         onDelete={deleteEvent}
+        onRenameThread={renameThreadId}
       />
     </div>
   );
