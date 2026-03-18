@@ -457,6 +457,56 @@ function getSharedEventX(
   return fallbackX;
 }
 
+function getClosestAvailableThreadX(
+  targetX: number,
+  occupiedPositions: number[],
+  minX: number,
+  maxX: number,
+  minimumGap: number,
+) {
+  const clampedTarget = clamp(targetX, minX, maxX);
+  const candidatePositions = new Set<number>([clampedTarget, minX, maxX]);
+
+  for (const occupiedX of occupiedPositions) {
+    candidatePositions.add(clamp(occupiedX - minimumGap, minX, maxX));
+    candidatePositions.add(clamp(occupiedX + minimumGap, minX, maxX));
+  }
+
+  const candidates = Array.from(candidatePositions).sort((left, right) => {
+    const distanceDifference = Math.abs(left - clampedTarget) - Math.abs(right - clampedTarget);
+    if (Math.abs(distanceDifference) > 0.001) {
+      return distanceDifference;
+    }
+
+    return left - right;
+  });
+
+  const resolvedCandidate = candidates.find((candidate) =>
+    occupiedPositions.every((occupiedX) => Math.abs(candidate - occupiedX) >= minimumGap - 0.001),
+  );
+
+  if (resolvedCandidate !== undefined) {
+    return resolvedCandidate;
+  }
+
+  return candidates.reduce((bestCandidate, candidate) => {
+    const bestDistance = Math.min(
+      ...occupiedPositions.map((occupiedX) => Math.abs(bestCandidate - occupiedX)),
+    );
+    const candidateDistance = Math.min(
+      ...occupiedPositions.map((occupiedX) => Math.abs(candidate - occupiedX)),
+    );
+
+    if (Math.abs(candidateDistance - bestDistance) > 0.001) {
+      return candidateDistance > bestDistance ? candidate : bestCandidate;
+    }
+
+    return Math.abs(candidate - clampedTarget) < Math.abs(bestCandidate - clampedTarget)
+      ? candidate
+      : bestCandidate;
+  }, candidates[0] ?? clampedTarget);
+}
+
 function resolveHorizontalEventNodeCollisions<
   T extends {
     event: Event;
@@ -806,44 +856,93 @@ export function ThreadCanvas({
 
     const gridLines = mergeGridLines(rawGridLines);
     const positions = new Map<string, number>();
-    const eventThreads = new Set(events.map((e) => e.threadId).filter(Boolean) as string[]);
-    const columns = [
-      ...people.map((p) => ({
-        color: p.color,
-        id: p.id,
-        name: p.name,
-        type: 'person' as const,
-      })),
-      ...Array.from(eventThreads).map((tid) => {
-        const threadEvents = events.filter((e) => e.threadId === tid);
-        return {
-          color: threadEvents[0]?.color || '#64748b',
-          id: tid,
-          name: tid,
-          type: 'eventThread' as const,
-        };
-      }),
-    ];
-    const personColumns = columns.filter((col) => col.type === 'person');
-    const eventThreadColumns = columns.filter((col) => col.type === 'eventThread');
+    const eventThreads = Array.from(
+      new Set(events.map((event) => event.threadId).filter(Boolean) as string[]),
+    );
+    const threadEventsById = new Map(
+      eventThreads.map((threadId) => [
+        threadId,
+        events.filter((event) => event.threadId === threadId),
+      ]),
+    );
+    const personColumns = people.map((person) => ({
+      color: person.color,
+      id: person.id,
+      name: person.name,
+      type: 'person' as const,
+    }));
+    const eventThreadColumns = eventThreads.map((threadId) => {
+      const threadEvents = threadEventsById.get(threadId) ?? [];
+      return {
+        color: threadEvents[0]?.color || '#64748b',
+        id: threadId,
+        name: threadId,
+        type: 'eventThread' as const,
+      };
+    });
+    const columns = [...personColumns, ...eventThreadColumns];
     const eventThreadColorById = new Map(eventThreadColumns.map((col) => [col.id, col.color]));
 
     const availableWidth = Math.max(svgWidth - sideMargin - rightMargin, 160);
-    const spacing = columns.length > 1 ? availableWidth / (columns.length - 1) : availableWidth / 2;
+    const minThreadX = sideMargin;
+    const maxThreadX = sideMargin + availableWidth;
+    const personSpacing =
+      personColumns.length > 1 ? availableWidth / (personColumns.length - 1) : availableWidth / 2;
 
-    columns.forEach((col, index) => {
+    personColumns.forEach((col, index) => {
       positions.set(
         col.id,
-        sideMargin + (columns.length === 1 ? availableWidth / 2 : index * spacing),
+        sideMargin + (personColumns.length === 1 ? availableWidth / 2 : index * personSpacing),
       );
     });
     const personThreadPositions = personColumns
       .map((col) => positions.get(col.id))
       .filter((position): position is number => position !== undefined);
+    const threadSeparation =
+      columns.length > 1
+        ? clamp((availableWidth / (columns.length - 1)) * 0.45, 18, 52)
+        : 24;
+
+    const resolvedEventThreadPositions = eventThreadColumns
+      .map((col) => {
+        const threadEvents = threadEventsById.get(col.id) ?? [];
+        const linkedPersonPositions = threadEvents.flatMap((event) =>
+          event.personIds
+            .map((personId) => positions.get(personId))
+            .filter((position): position is number => position !== undefined),
+        );
+        const targetX =
+          linkedPersonPositions.length > 0
+            ? getSharedEventX(
+                linkedPersonPositions,
+                personThreadPositions,
+                sideMargin + availableWidth / 2,
+              )
+            : sideMargin + availableWidth / 2;
+
+        return {
+          id: col.id,
+          targetX,
+        };
+      })
+      .sort((left, right) => left.targetX - right.targetX || left.id.localeCompare(right.id));
+    const occupiedThreadPositions = [...personThreadPositions];
+
+    resolvedEventThreadPositions.forEach(({ id, targetX }) => {
+      const resolvedX = getClosestAvailableThreadX(
+        targetX,
+        occupiedThreadPositions,
+        minThreadX,
+        maxThreadX,
+        threadSeparation,
+      );
+      positions.set(id, resolvedX);
+      occupiedThreadPositions.push(resolvedX);
+    });
 
     const eventThreadRanges = new Map<string, { minY: number; maxY: number }>();
-    Array.from(eventThreads).forEach((tid) => {
-      const threadEvents = events.filter((e) => e.threadId === tid);
+    eventThreads.forEach((tid) => {
+      const threadEvents = threadEventsById.get(tid) ?? [];
       if (threadEvents.length > 0) {
         const earliestTimestamp = Math.min(...threadEvents.map((e) => e.timestamp));
         const latestTimestamp = Math.max(...threadEvents.map((e) => e.timestamp));
