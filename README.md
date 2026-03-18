@@ -71,15 +71,9 @@ git --version
 
 ### 1. Clone the repository
 
-```bash
-git clone <your-repo-url>
-cd MemoryForest
-```
-
-Replace `<your-repo-url>` with the repository URL you want to use, for example:
 
 ```bash
-git clone https://github.com/<your-org>/MemoryForest.git
+git clone https://github.com/Overture-2021/MemoryForest.git
 cd MemoryForest
 ```
 
