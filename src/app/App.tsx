@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Calendar, GitBranch, Users } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
@@ -9,16 +9,25 @@ import { EventDetailsSheet } from './components/event-details-sheet';
 import { PeopleList } from './components/people-list';
 import { EventsList } from './components/events-list';
 import { Person, Event } from './types/thread-memories';
+import {
+  loadThreadMemoriesSnapshot,
+  saveThreadMemoriesSnapshot,
+} from './thread-memory-storage';
 
 export default function App() {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  const [initialSnapshot] = useState(() => loadThreadMemoriesSnapshot());
+  const [people, setPeople] = useState<Person[]>(() => initialSnapshot?.people ?? []);
+  const [events, setEvents] = useState<Event[]>(() => initialSnapshot?.events ?? []);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
+  useEffect(() => {
+    saveThreadMemoriesSnapshot({ people, events });
+  }, [people, events]);
 
   const addPerson = (name: string, color: string) => {
     const newPerson: Person = {
