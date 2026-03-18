@@ -628,16 +628,27 @@ export function ThreadCanvas({
     setVerticalZoom(clampedZoom);
   };
 
-  const handleViewportWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!(event.ctrlKey || event.metaKey)) {
-      return;
-    }
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
-    event.preventDefault();
+    const handleViewportWheel = (event: WheelEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) {
+        return;
+      }
 
-    const zoomFactor = Math.exp(-event.deltaY * 0.0015);
-    setAnchoredVerticalZoom(verticalZoom * zoomFactor, event.clientY);
-  };
+      event.preventDefault();
+
+      const zoomFactor = Math.exp(-event.deltaY * 0.0015);
+      setAnchoredVerticalZoom(verticalZoom * zoomFactor, event.clientY);
+    };
+
+    viewport.addEventListener('wheel', handleViewportWheel, { passive: false });
+
+    return () => {
+      viewport.removeEventListener('wheel', handleViewportWheel);
+    };
+  }, [verticalZoom]);
 
   const {
     sideMargin,
@@ -998,7 +1009,6 @@ export function ThreadCanvas({
       <div
         ref={viewportRef}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
-        onWheel={handleViewportWheel}
       >
         <div className="sticky top-3 z-20 ml-auto mr-3 mt-3 flex h-0 w-fit justify-end">
           <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md">
