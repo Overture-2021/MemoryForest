@@ -573,10 +573,21 @@ export function ThreadCanvas({
   const [presentAnchorTime] = useState(() => Date.now());
   const [canvasWidth, setCanvasWidth] = useState(1200);
   const [verticalZoom, setVerticalZoom] = useState(INITIAL_VERTICAL_ZOOM);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [viewportMetrics, setViewportMetrics] = useState({
     height: 0,
     scrollTop: 0,
   });
+  const peopleById = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
+  const hoveredEvent = useMemo(
+    () => events.find((event) => event.id === hoveredEventId) ?? null,
+    [events, hoveredEventId],
+  );
+  const highlightedPersonIds = useMemo(
+    () => new Set(hoveredEvent?.personIds ?? []),
+    [hoveredEvent],
+  );
+  const hasHoveredEvent = hoveredEvent !== null;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1080,23 +1091,38 @@ export function ThreadCanvas({
         {personColumns.map((col) => {
           const x = threadPositions.get(col.id);
           if (x === undefined) return null;
+          const isHighlighted = highlightedPersonIds.has(col.id);
 
           return (
             <div
               key={col.id}
-              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-transform"
-              style={{ left: x }}
+              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-all"
+              style={{
+                left: x,
+                opacity: hasHoveredEvent ? (isHighlighted ? 1 : 0.45) : 1,
+                transform: `translateX(-50%) scale(${hasHoveredEvent && isHighlighted ? 1.04 : 1})`,
+              }}
             >
               <div
                 className="mb-1.5 h-3 w-3 shadow-sm"
                 style={{
                   backgroundColor: col.color,
                   borderRadius: '50%',
+                  boxShadow:
+                    hasHoveredEvent && isHighlighted
+                      ? `0 0 0 4px ${col.color}22, 0 4px 10px ${col.color}33`
+                      : undefined,
                 }}
               />
               <span
                 className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"
-                style={{ backgroundColor: col.color }}
+                style={{
+                  backgroundColor: col.color,
+                  boxShadow:
+                    hasHoveredEvent && isHighlighted
+                      ? `0 0 0 2px white, 0 8px 18px ${col.color}33`
+                      : undefined,
+                }}
               >
                 {col.name}
               </span>
@@ -1186,6 +1212,7 @@ export function ThreadCanvas({
               if (x === undefined) return null;
 
               if (col.type === 'person') {
+                const isHighlighted = highlightedPersonIds.has(col.id);
                 return (
                   <line
                     key={col.id}
@@ -1194,8 +1221,11 @@ export function ThreadCanvas({
                     x2={x}
                     y2={totalHeight}
                     stroke={col.color}
-                    strokeWidth="2"
-                    opacity="0.3"
+                    strokeWidth={hasHoveredEvent && isHighlighted ? 3 : 2}
+                    opacity={hasHoveredEvent ? (isHighlighted ? 0.9 : 0.14) : 0.3}
+                    style={{
+                      transition: 'opacity 180ms ease, stroke-width 180ms ease',
+                    }}
                   />
                 );
               }
@@ -1273,7 +1303,8 @@ export function ThreadCanvas({
                 const threadX = threadPositions.get(personId);
                 if (threadX === undefined) return null;
 
-                const person = people.find((p) => p.id === personId);
+                const person = peopleById.get(personId);
+                const isHighlighted = hoveredEventId === event.id;
 
                 return (
                   <path
@@ -1286,10 +1317,13 @@ export function ThreadCanvas({
                       event.personIds.length,
                     )}
                     stroke={person?.color || '#64748b'}
-                    strokeWidth="2"
-                    opacity="0.5"
+                    strokeWidth={isHighlighted ? 3 : hasHoveredEvent ? 1.5 : 2}
+                    opacity={hasHoveredEvent ? (isHighlighted ? 0.95 : 0.12) : 0.5}
                     fill="none"
                     strokeLinecap="round"
+                    style={{
+                      transition: 'opacity 180ms ease, stroke-width 180ms ease',
+                    }}
                   />
                 );
               }),
@@ -1299,6 +1333,8 @@ export function ThreadCanvas({
               <g
                 key={event.id}
                 onClick={() => onEventClick?.(event)}
+                onMouseEnter={() => setHoveredEventId(event.id)}
+                onMouseLeave={() => setHoveredEventId((current) => (current === event.id ? null : current))}
                 className="group cursor-pointer"
               >
                 <circle
@@ -1307,17 +1343,25 @@ export function ThreadCanvas({
                   r={8}
                   fill={event.color}
                   stroke="white"
-                  strokeWidth="2"
+                  strokeWidth={hoveredEventId === event.id ? 2.5 : 2}
                   style={{
-                    filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
+                    filter:
+                      hoveredEventId === event.id
+                        ? `drop-shadow(0px 0px 0px ${event.color}) drop-shadow(0px 4px 10px ${event.color}55)`
+                        : 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
+                    transition: 'stroke-width 180ms ease, filter 180ms ease',
                   }}
                 />
                 <circle
                   cx={x}
                   cy={y}
-                  r={14}
-                  fill="transparent"
-                  className="group-hover:fill-black group-hover:fill-opacity-5"
+                  r={hoveredEventId === event.id ? 18 : 14}
+                  fill={hoveredEventId === event.id ? event.color : 'transparent'}
+                  fillOpacity={hoveredEventId === event.id ? 0.12 : undefined}
+                  style={{
+                    transition: 'r 180ms ease, fill-opacity 180ms ease',
+                  }}
+                  className={hoveredEventId === event.id ? undefined : 'group-hover:fill-black group-hover:fill-opacity-5'}
                 />
 
                 <line
