@@ -31,8 +31,7 @@ Time flows from bottom to top in the visualization.
 This repository is currently a client-side prototype:
 
 - data is stored in React component state
-- there is no backend or persistence layer
-- refreshing the page clears the current data
+- there is no backend layer
 
 ## Tech Stack
 
