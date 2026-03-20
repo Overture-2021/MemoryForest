@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Clock, Folder, FolderOpen, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, Clock, Folder, FolderOpen, LocateFixed, Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Event, Person } from '../types/thread-memories';
 import { formatDateInputValue } from '../utils/date-format';
@@ -22,6 +22,7 @@ interface EventsListProps {
   onEdit: (event: Event) => void;
   onDelete: (id: string) => void;
   onView?: (event: Event) => void;
+  onFocusTimeline?: (event: Event) => void;
   selectedEventId?: string | null;
 }
 
@@ -43,6 +44,7 @@ export function EventsList({
   onEdit,
   onDelete,
   onView,
+  onFocusTimeline,
   selectedEventId,
 }: EventsListProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -204,6 +206,22 @@ export function EventsList({
                       </div>
 
                       <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onFocusTimeline?.(event);
+                          }}
+                          className="h-7 w-7 p-0"
+                          title="Center on timeline at 1281% zoom"
+                        >
+                          <LocateFixed className="h-3 w-3" />
+                          <span className="sr-only">
+                            Center {event.title} on the timeline at 1281% zoom
+                          </span>
+                        </Button>
+
                         <Button
                           size="sm"
                           variant="ghost"

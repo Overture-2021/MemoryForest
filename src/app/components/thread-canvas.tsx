@@ -6,6 +6,10 @@ interface ThreadCanvasProps {
   people: Person[];
   events: Event[];
   onEventClick?: (event: Event) => void;
+  focusRequest?: {
+    eventId: string;
+    requestId: number;
+  } | null;
 }
 
 const msPerDay = 24 * 60 * 60 * 1000;
@@ -32,6 +36,8 @@ const EVENT_LABEL_SECTION_GAP = 6;
 const EVENT_TAG_HEIGHT = 22;
 const EVENT_TAG_GAP = 8;
 const GRID_RENDER_BUFFER = 240;
+const EVENT_FOCUS_ZOOM_PERCENT = 1281;
+const EVENT_FOCUS_ZOOM = (INITIAL_VERTICAL_ZOOM * EVENT_FOCUS_ZOOM_PERCENT) / 100;
 
 interface BoxLayout {
   height: number;
@@ -556,6 +562,7 @@ export function ThreadCanvas({
   people,
   events,
   onEventClick,
+  focusRequest,
 }: ThreadCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -564,11 +571,16 @@ export function ThreadCanvas({
     anchorRatio: number;
     zoom: number;
   } | null>(null);
+  const handledFocusRequestIdRef = useRef<number | null>(null);
   const hasInitializedViewportRef = useRef(false);
   const [presentAnchorTime] = useState(() => Date.now());
   const [canvasWidth, setCanvasWidth] = useState(1200);
   const [verticalZoom, setVerticalZoom] = useState(INITIAL_VERTICAL_ZOOM);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const [pendingFocusRequest, setPendingFocusRequest] = useState<{
+    eventId: string;
+    requestId: number;
+  } | null>(null);
   const [viewportMetrics, setViewportMetrics] = useState({
     height: 0,
     scrollTop: 0,
@@ -683,6 +695,29 @@ export function ThreadCanvas({
     };
     setVerticalZoom(clampedZoom);
   };
+
+  useEffect(() => {
+    if (!focusRequest || handledFocusRequestIdRef.current === focusRequest.requestId) {
+      return;
+    }
+
+    const requestedEvent = events.find((event) => event.id === focusRequest.eventId);
+    if (!requestedEvent) {
+      handledFocusRequestIdRef.current = focusRequest.requestId;
+      setPendingFocusRequest(null);
+      return;
+    }
+
+    handledFocusRequestIdRef.current = focusRequest.requestId;
+    setPendingFocusRequest({
+      eventId: requestedEvent.id,
+      requestId: focusRequest.requestId,
+    });
+
+    if (Math.abs(verticalZoom - EVENT_FOCUS_ZOOM) > 0.001) {
+      setAnchoredVerticalZoom(EVENT_FOCUS_ZOOM);
+    }
+  }, [events, focusRequest, verticalZoom]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1076,6 +1111,37 @@ export function ThreadCanvas({
       viewport.scrollTop = clampedScrollTop;
     }
   }, [scrollRangeEnd, scrollRangeStart]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!pendingFocusRequest || !viewport || viewport.clientHeight === 0) {
+      return;
+    }
+
+    if (Math.abs(verticalZoom - EVENT_FOCUS_ZOOM) > 0.001) {
+      return;
+    }
+
+    const targetNode = eventNodes.find(({ event }) => event.id === pendingFocusRequest.eventId);
+    if (!targetNode) {
+      setPendingFocusRequest(null);
+      return;
+    }
+
+    const centeredScrollTop = clamp(
+      targetNode.y - viewport.clientHeight / 2,
+      scrollRangeStart,
+      scrollRangeEnd,
+    );
+
+    if (Math.abs(centeredScrollTop - viewport.scrollTop) > 0.5) {
+      viewport.scrollTop = centeredScrollTop;
+    }
+
+    setPendingFocusRequest((currentRequest) =>
+      currentRequest?.requestId === pendingFocusRequest.requestId ? null : currentRequest,
+    );
+  }, [eventNodes, pendingFocusRequest, scrollRangeEnd, scrollRangeStart, verticalZoom]);
 
   return (
     <div

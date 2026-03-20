@@ -14,6 +14,11 @@ import {
   saveThreadMemoriesSnapshot,
 } from './thread-memory-storage';
 
+interface TimelineFocusRequest {
+  eventId: string;
+  requestId: number;
+}
+
 export default function App() {
   const [initialSnapshot] = useState(() => loadThreadMemoriesSnapshot());
   const [people, setPeople] = useState<Person[]>(() => initialSnapshot?.people ?? []);
@@ -24,6 +29,7 @@ export default function App() {
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [timelineFocusRequest, setTimelineFocusRequest] = useState<TimelineFocusRequest | null>(null);
 
   useEffect(() => {
     saveThreadMemoriesSnapshot({ people, events });
@@ -160,6 +166,13 @@ export default function App() {
     setShowEventDetails(false);
   };
 
+  const handleFocusEventOnTimeline = (event: Event) => {
+    setTimelineFocusRequest((currentRequest) => ({
+      eventId: event.id,
+      requestId: (currentRequest?.requestId ?? 0) + 1,
+    }));
+  };
+
   const usedColors = people.map((p) => p.color);
 
   return (
@@ -242,6 +255,7 @@ export default function App() {
                   onEdit={setEditingEvent}
                   onDelete={deleteEvent}
                   onView={handleEventClick}
+                  onFocusTimeline={handleFocusEventOnTimeline}
                   selectedEventId={selectedEvent?.id ?? null}
                 />
               )}
@@ -262,7 +276,12 @@ export default function App() {
           </aside>
 
           <div className="min-h-[420px] min-w-0 xl:h-full xl:min-h-0">
-            <ThreadCanvas people={people} events={events} onEventClick={handleEventClick} />
+            <ThreadCanvas
+              people={people}
+              events={events}
+              onEventClick={handleEventClick}
+              focusRequest={timelineFocusRequest}
+            />
           </div>
         </div>
       </main>
