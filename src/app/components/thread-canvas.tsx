@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Person, Event } from '../types/thread-memories';
+import { formatDateTimeValue } from '../utils/date-format';
 
 interface ThreadCanvasProps {
   people: Person[];
@@ -344,13 +345,7 @@ function getEventLabelLayout(
   );
   const titleLines = wrapText(title, maxChars, 2);
   const interpretationLines = interpretation ? wrapText(interpretation, maxChars, 2) : [];
-  const dateLabel = new Date(timestamp).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  const dateLabel = formatDateTimeValue(new Date(timestamp));
   const participantLabel = `${participantCount} ☺︎`;
   const metaLabel = `${dateLabel} • ${participantLabel}`;
   const longestLine = Math.max(

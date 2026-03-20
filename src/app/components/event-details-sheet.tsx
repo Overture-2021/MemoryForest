@@ -5,6 +5,7 @@ import { Calendar, Users, Tag, MessageSquare, Pencil, Trash2 } from 'lucide-reac
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import { formatDateTimeValue } from '../utils/date-format';
 import {
   Dialog,
   DialogContent,
@@ -99,13 +100,7 @@ export function EventDetailsSheet({
                 <span>Time</span>
               </div>
               <p className="pl-6 text-sm leading-6 text-slate-800">
-                {eventDate.toLocaleString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatDateTimeValue(eventDate)}
               </p>
             </div>
 

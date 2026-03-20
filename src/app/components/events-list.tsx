@@ -2,6 +2,7 @@ import React from 'react';
 import { Pencil, Trash2, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Event, Person } from '../types/thread-memories';
+import { formatDateInputValue } from '../utils/date-format';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +41,7 @@ export function EventsList({ events, people, onEdit, onDelete, onView }: EventsL
     if (days < 7) return `${days}d ago`;
     
     const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatDateInputValue(date);
   };
 
   const getPeopleNames = (personIds: string[]) => {

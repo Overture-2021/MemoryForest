@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { Person, Event, EVENT_COLORS } from '../types/thread-memories';
+import { formatDateInputValue, formatTimeValue, isValidDateInputValue } from '../utils/date-format';
 
 interface AddEventDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
   const [threadId, setThreadId] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
+  const isEventDateValid = isValidDateInputValue(eventDate);
 
   useEffect(() => {
     if (editingEvent) {
@@ -36,11 +38,9 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       
       // Convert timestamp to date and time
       const date = new Date(editingEvent.timestamp);
-      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const dateStr = formatDateInputValue(date);
       setEventDate(dateStr);
-      setEventTime(`${hours}:${minutes}`);
+      setEventTime(formatTimeValue(date));
     } else {
       setTitle('');
       setInterpretation('');
@@ -50,14 +50,14 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       
       // Default to current date
       const now = new Date();
-      setEventDate(now.toISOString().split('T')[0]);
+      setEventDate(formatDateInputValue(now));
       setEventTime('');
     }
   }, [editingEvent, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim() && selectedPeople.length > 0 && eventDate) {
+    if (title.trim() && selectedPeople.length > 0 && isEventDateValid) {
       // Create timestamp from date and optional time
       const [year, month, day] = eventDate.split('-').map(Number);
       let hours = 0;
@@ -203,11 +203,16 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
               <Label htmlFor="event-date">Event Date</Label>
               <Input
                 id="event-date"
-                type="date"
+                type="text"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
+                inputMode="numeric"
+                placeholder="yyyy-mm-dd"
+                pattern="\d{4}-\d{2}-\d{2}"
+                aria-invalid={eventDate.length > 0 && !isEventDateValid}
                 required
               />
+              <p className="text-xs text-slate-500">Use format yyyy-mm-dd</p>
             </div>
 
             <div className="space-y-2">
@@ -224,7 +229,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || selectedPeople.length === 0 || !eventDate}>
+            <Button type="submit" disabled={!title.trim() || selectedPeople.length === 0 || !isEventDateValid}>
               {isEditing ? 'Update' : 'Add Event'}
             </Button>
           </DialogFooter>
