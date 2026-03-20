@@ -242,6 +242,7 @@ export default function App() {
                   onEdit={setEditingEvent}
                   onDelete={deleteEvent}
                   onView={handleEventClick}
+                  selectedEventId={selectedEvent?.id ?? null}
                 />
               )}
             </Card>
