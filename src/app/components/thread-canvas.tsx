@@ -35,6 +35,8 @@ const EVENT_LABEL_META_LINE_HEIGHT = 12;
 const EVENT_LABEL_SECTION_GAP = 6;
 const EVENT_TAG_HEIGHT = 22;
 const EVENT_TAG_GAP = 8;
+const EVENT_TAG_VIEWPORT_PADDING = 14;
+const EVENT_TAG_THREAD_OFFSET = 18;
 const GRID_RENDER_BUFFER = 240;
 const EVENT_FOCUS_ZOOM_PERCENT = 1281;
 const EVENT_FOCUS_ZOOM = (INITIAL_VERTICAL_ZOOM * EVENT_FOCUS_ZOOM_PERCENT) / 100;
@@ -1054,6 +1056,12 @@ export function ThreadCanvas({
       labelLayout: labelByEventId.get(node.event.id) ?? node.labelLayout,
     }));
 
+    const visibleTagMinY = clamp(viewportMetrics.scrollTop + EVENT_TAG_VIEWPORT_PADDING, 0, totalHeight);
+    const visibleTagMaxY = clamp(
+      viewportMetrics.scrollTop + viewportHeight - EVENT_TAG_VIEWPORT_PADDING,
+      visibleTagMinY,
+      totalHeight,
+    );
     const eventThreadTags = resolveVerticalCollisions(
       eventThreadColumns
         .map((col) => {
@@ -1061,12 +1069,26 @@ export function ThreadCanvas({
           const range = eventThreadRanges.get(col.id);
           if (x === undefined || !range) return null;
 
-          const startY = Math.max(20, range.minY - 40);
-          return getThreadTagLayout(col.id, x, Math.min(totalHeight - 24, startY + 18), svgWidth, col.name);
+          const threadVisibleTop = Math.max(range.minY, viewportMetrics.scrollTop);
+          const threadVisibleBottom = Math.min(
+            range.maxY,
+            viewportMetrics.scrollTop + viewportHeight,
+          );
+          if (threadVisibleTop > threadVisibleBottom) {
+            return null;
+          }
+
+          const preferredCenterY = clamp(
+            range.minY + EVENT_TAG_THREAD_OFFSET,
+            visibleTagMinY + EVENT_TAG_HEIGHT / 2,
+            Math.max(visibleTagMinY + EVENT_TAG_HEIGHT / 2, visibleTagMaxY - EVENT_TAG_HEIGHT / 2),
+          );
+
+          return getThreadTagLayout(col.id, x, preferredCenterY, svgWidth, col.name);
         })
         .filter((tag): tag is EventThreadTagLayout => tag !== null),
-      12,
-      totalHeight - 12,
+      visibleTagMinY,
+      visibleTagMaxY,
       EVENT_TAG_GAP,
     );
 
