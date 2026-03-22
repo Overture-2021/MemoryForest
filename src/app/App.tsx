@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Calendar, GitBranch, Users } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, Calendar, GitBranch, Users, Download, Upload } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { ThreadCanvas } from './components/thread-canvas';
@@ -10,13 +10,20 @@ import { PeopleList } from './components/people-list';
 import { EventsList } from './components/events-list';
 import { Person, Event } from './types/thread-memories';
 import {
+  createThreadMemoriesSnapshot,
   loadThreadMemoriesSnapshot,
+  parseThreadMemoriesSnapshot,
   saveThreadMemoriesSnapshot,
 } from './thread-memory-storage';
 
 interface TimelineFocusRequest {
   eventId: string;
   requestId: number;
+}
+
+interface TransferStatus {
+  type: 'success' | 'error';
+  message: string;
 }
 
 export default function App() {
@@ -30,10 +37,22 @@ export default function App() {
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [timelineFocusRequest, setTimelineFocusRequest] = useState<TimelineFocusRequest | null>(null);
+  const [transferStatus, setTransferStatus] = useState<TransferStatus | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     saveThreadMemoriesSnapshot({ people, events });
   }, [people, events]);
+
+  const resetTransientUiState = () => {
+    setShowAddPerson(false);
+    setShowAddEvent(false);
+    setSelectedEvent(null);
+    setShowEventDetails(false);
+    setEditingPerson(null);
+    setEditingEvent(null);
+    setTimelineFocusRequest(null);
+  };
 
   const addPerson = (name: string, color: string) => {
     const newPerson: Person = {
@@ -173,6 +192,71 @@ export default function App() {
     }));
   };
 
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const rawSnapshot = await file.text();
+      let parsedJson: unknown;
+
+      try {
+        parsedJson = JSON.parse(rawSnapshot) as unknown;
+      } catch {
+        throw new Error('The selected file is not valid JSON.');
+      }
+
+      const importedSnapshot = parseThreadMemoriesSnapshot(parsedJson);
+      if (!importedSnapshot) {
+        throw new Error('The selected file does not contain a valid Memory Forest timeline.');
+      }
+
+      setPeople(importedSnapshot.people);
+      setEvents(importedSnapshot.events);
+      resetTransientUiState();
+      setTransferStatus({
+        type: 'success',
+        message: `Imported ${importedSnapshot.people.length} people and ${importedSnapshot.events.length} events from ${file.name}.`,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to import the selected file.';
+      setTransferStatus({
+        type: 'error',
+        message,
+      });
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleExportClick = () => {
+    const snapshot = createThreadMemoriesSnapshot({ people, events });
+    const fileName = `memory-forest-${new Date().toISOString().slice(0, 10)}.json`;
+    const fileContents = JSON.stringify(snapshot, null, 2);
+    const blob = new Blob([fileContents], { type: 'application/json' });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    anchor.href = downloadUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    setTransferStatus({
+      type: 'success',
+      message: `Exported ${people.length} people and ${events.length} events to ${fileName}.`,
+    });
+  };
+
   const usedColors = people.map((p) => p.color);
 
   return (
@@ -258,6 +342,45 @@ export default function App() {
                   onFocusTimeline={handleFocusEventOnTimeline}
                   selectedEventId={selectedEvent?.id ?? null}
                 />
+              )}
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700">Import / Export</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Import replaces the current timeline.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button onClick={handleImportClick} variant="outline" className="w-full">
+                  <Upload className="h-4 w-4" />
+                  Import JSON
+                </Button>
+                <Button onClick={handleExportClick} variant="outline" className="w-full">
+                  <Download className="h-4 w-4" />
+                  Export JSON
+                </Button>
+              </div>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={handleImportFileChange}
+              />
+              {transferStatus && (
+                <div
+                  className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+                    transferStatus.type === 'error'
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  {transferStatus.message}
+                </div>
               )}
             </Card>
 

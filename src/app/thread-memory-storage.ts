@@ -98,6 +98,23 @@ function migrateSnapshot(value: unknown): ThreadMemoriesSnapshot | null {
   });
 }
 
+export function createThreadMemoriesSnapshot(
+  snapshot: Omit<ThreadMemoriesSnapshot, 'version'>,
+): ThreadMemoriesSnapshot {
+  return normalizeSnapshot({
+    version: STORAGE_VERSION,
+    ...snapshot,
+  });
+}
+
+export function parseThreadMemoriesSnapshot(value: unknown): ThreadMemoriesSnapshot | null {
+  if (isSnapshot(value)) {
+    return normalizeSnapshot(value);
+  }
+
+  return migrateSnapshot(value);
+}
+
 export function loadThreadMemoriesSnapshot(): ThreadMemoriesSnapshot | null {
   if (typeof window === 'undefined') {
     return null;
@@ -110,11 +127,7 @@ export function loadThreadMemoriesSnapshot(): ThreadMemoriesSnapshot | null {
     }
 
     const parsedSnapshot = JSON.parse(rawSnapshot) as unknown;
-    if (isSnapshot(parsedSnapshot)) {
-      return normalizeSnapshot(parsedSnapshot);
-    }
-
-    return migrateSnapshot(parsedSnapshot);
+    return parseThreadMemoriesSnapshot(parsedSnapshot);
   } catch (error) {
     console.warn('Failed to load thread memories from localStorage.', error);
     return null;
@@ -126,10 +139,7 @@ export function saveThreadMemoriesSnapshot(snapshot: Omit<ThreadMemoriesSnapshot
     return;
   }
 
-  const normalizedSnapshot = normalizeSnapshot({
-    version: STORAGE_VERSION,
-    ...snapshot,
-  });
+  const normalizedSnapshot = createThreadMemoriesSnapshot(snapshot);
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSnapshot));
