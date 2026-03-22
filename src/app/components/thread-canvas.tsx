@@ -579,6 +579,7 @@ export function ThreadCanvas({
   const [canvasWidth, setCanvasWidth] = useState(1200);
   const [verticalZoom, setVerticalZoom] = useState(INITIAL_VERTICAL_ZOOM);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [pendingFocusRequest, setPendingFocusRequest] = useState<{
     eventId: string;
     requestId: number;
@@ -592,11 +593,32 @@ export function ThreadCanvas({
     () => events.find((event) => event.id === hoveredEventId) ?? null,
     [events, hoveredEventId],
   );
-  const highlightedPersonIds = useMemo(
-    () => new Set(hoveredEvent?.personIds ?? []),
-    [hoveredEvent],
+  const selectedPersonEventIds = useMemo(
+    () =>
+      new Set(
+        selectedPersonId
+          ? events
+              .filter((event) => event.personIds.includes(selectedPersonId))
+              .map((event) => event.id)
+          : [],
+      ),
+    [events, selectedPersonId],
   );
-  const hasHoveredEvent = hoveredEvent !== null;
+  const activeHighlightedPersonIds = useMemo(() => {
+    if (selectedPersonId) {
+      return new Set([selectedPersonId]);
+    }
+
+    return new Set(hoveredEvent?.personIds ?? []);
+  }, [hoveredEvent, selectedPersonId]);
+  const hasActiveHighlight = selectedPersonId !== null || hoveredEvent !== null;
+  const hasSelectedPerson = selectedPersonId !== null;
+
+  useEffect(() => {
+    if (selectedPersonId && !people.some((person) => person.id === selectedPersonId)) {
+      setSelectedPersonId(null);
+    }
+  }, [people, selectedPersonId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1174,16 +1196,24 @@ export function ThreadCanvas({
         {personColumns.map((col) => {
           const x = threadPositions.get(col.id);
           if (x === undefined) return null;
-          const isHighlighted = highlightedPersonIds.has(col.id);
+          const isHighlighted = activeHighlightedPersonIds.has(col.id);
+          const isSelected = selectedPersonId === col.id;
 
           return (
-            <div
+            <button
               key={col.id}
-              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center transition-all"
+              type="button"
+              onClick={() =>
+                setSelectedPersonId((currentPersonId) => (currentPersonId === col.id ? null : col.id))
+              }
+              aria-pressed={isSelected}
+              aria-label={`${isSelected ? 'Clear highlight for' : 'Highlight'} ${col.name}'s thread`}
+              title={isSelected ? `Clear ${col.name} highlight` : `Highlight ${col.name} thread`}
+              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center rounded-md px-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
               style={{
                 left: x,
-                opacity: hasHoveredEvent ? (isHighlighted ? 1 : 0.45) : 1,
-                transform: `translateX(-50%) scale(${hasHoveredEvent && isHighlighted ? 1.04 : 1})`,
+                opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.45) : 1,
+                transform: `translateX(-50%) scale(${isHighlighted ? 1.04 : 1})`,
               }}
             >
               <div
@@ -1192,7 +1222,7 @@ export function ThreadCanvas({
                   backgroundColor: col.color,
                   borderRadius: '50%',
                   boxShadow:
-                    hasHoveredEvent && isHighlighted
+                    isHighlighted
                       ? `0 0 0 4px ${col.color}22, 0 4px 10px ${col.color}33`
                       : undefined,
                 }}
@@ -1202,14 +1232,14 @@ export function ThreadCanvas({
                 style={{
                   backgroundColor: col.color,
                   boxShadow:
-                    hasHoveredEvent && isHighlighted
+                    isHighlighted
                       ? `0 0 0 2px white, 0 8px 18px ${col.color}33`
                       : undefined,
                 }}
               >
                 {col.name}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1295,7 +1325,7 @@ export function ThreadCanvas({
               if (x === undefined) return null;
 
               if (col.type === 'person') {
-                const isHighlighted = highlightedPersonIds.has(col.id);
+                const isHighlighted = activeHighlightedPersonIds.has(col.id);
                 return (
                   <line
                     key={col.id}
@@ -1304,8 +1334,8 @@ export function ThreadCanvas({
                     x2={x}
                     y2={totalHeight}
                     stroke={col.color}
-                    strokeWidth={hasHoveredEvent && isHighlighted ? 3 : 2}
-                    opacity={hasHoveredEvent ? (isHighlighted ? 0.9 : 0.14) : 0.3}
+                    strokeWidth={isHighlighted ? 3 : 2}
+                    opacity={hasActiveHighlight ? (isHighlighted ? 0.9 : 0.14) : 0.3}
                     style={{
                       transition: 'opacity 180ms ease, stroke-width 180ms ease',
                     }}
@@ -1387,7 +1417,9 @@ export function ThreadCanvas({
                 if (threadX === undefined) return null;
 
                 const person = peopleById.get(personId);
-                const isHighlighted = hoveredEventId === event.id;
+                const isHighlighted = hasSelectedPerson
+                  ? selectedPersonId === personId && selectedPersonEventIds.has(event.id)
+                  : hoveredEventId === event.id;
 
                 return (
                   <path
@@ -1400,8 +1432,8 @@ export function ThreadCanvas({
                       event.personIds.length,
                     )}
                     stroke={person?.color || '#64748b'}
-                    strokeWidth={isHighlighted ? 3 : hasHoveredEvent ? 1.5 : 2}
-                    opacity={hasHoveredEvent ? (isHighlighted ? 0.95 : 0.12) : 0.5}
+                    strokeWidth={isHighlighted ? 3 : hasActiveHighlight ? 1.5 : 2}
+                    opacity={hasActiveHighlight ? (isHighlighted ? 0.95 : 0.12) : 0.5}
                     fill="none"
                     strokeLinecap="round"
                     style={{
@@ -1412,39 +1444,50 @@ export function ThreadCanvas({
               }),
             )}
 
-            {eventNodes.map(({ event, labelLayout, x, y }) => (
-              <g
-                key={event.id}
-                onClick={() => onEventClick?.(event)}
-                onMouseEnter={() => setHoveredEventId(event.id)}
-                onMouseLeave={() => setHoveredEventId((current) => (current === event.id ? null : current))}
-                className="group cursor-pointer"
-              >
+            {eventNodes.map(({ event, labelLayout, x, y }) => {
+              const isHighlighted = hasSelectedPerson
+                ? selectedPersonEventIds.has(event.id)
+                : hoveredEventId === event.id;
+
+              return (
+                <g
+                  key={event.id}
+                  onClick={() => onEventClick?.(event)}
+                  onMouseEnter={() => setHoveredEventId(event.id)}
+                  onMouseLeave={() =>
+                    setHoveredEventId((current) => (current === event.id ? null : current))
+                  }
+                  className="group cursor-pointer"
+                >
                 <circle
                   cx={x}
                   cy={y}
                   r={8}
                   fill={event.color}
                   stroke="white"
-                  strokeWidth={hoveredEventId === event.id ? 2.5 : 2}
+                  strokeWidth={isHighlighted ? 2.5 : 2}
                   style={{
                     filter:
-                      hoveredEventId === event.id
+                      isHighlighted
                         ? `drop-shadow(0px 0px 0px ${event.color}) drop-shadow(0px 4px 10px ${event.color}55)`
-                        : 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
-                    transition: 'stroke-width 180ms ease, filter 180ms ease',
+                        : hasActiveHighlight
+                          ? 'drop-shadow(0px 1px 2px rgba(0,0,0,0.08))'
+                          : 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
+                    opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.3) : 1,
+                    transition: 'stroke-width 180ms ease, filter 180ms ease, opacity 180ms ease',
                   }}
                 />
                 <circle
                   cx={x}
                   cy={y}
-                  r={hoveredEventId === event.id ? 18 : 14}
-                  fill={hoveredEventId === event.id ? event.color : 'transparent'}
-                  fillOpacity={hoveredEventId === event.id ? 0.12 : undefined}
+                  r={isHighlighted ? 18 : 14}
+                  fill={isHighlighted ? event.color : 'transparent'}
+                  fillOpacity={isHighlighted ? 0.12 : undefined}
                   style={{
-                    transition: 'r 180ms ease, fill-opacity 180ms ease',
+                    opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.45) : 1,
+                    transition: 'r 180ms ease, fill-opacity 180ms ease, opacity 180ms ease',
                   }}
-                  className={hoveredEventId === event.id ? undefined : 'group-hover:fill-black group-hover:fill-opacity-5'}
+                  className={isHighlighted ? undefined : 'group-hover:fill-black group-hover:fill-opacity-5'}
                 />
 
                 <line
@@ -1537,8 +1580,9 @@ export function ThreadCanvas({
                     </text>
                   )}
                 </g>
-              </g>
-            ))}
+                </g>
+              );
+            })}
 
             {events.length === 0 && people.length === 0 && (
               <text
