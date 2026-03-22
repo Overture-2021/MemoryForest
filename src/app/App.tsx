@@ -26,6 +26,8 @@ interface TransferStatus {
   message: string;
 }
 
+type ThreadDeleteMode = 'liberate' | 'delete';
+
 export default function App() {
   const [initialSnapshot] = useState(() => loadThreadMemoriesSnapshot());
   const [people, setPeople] = useState<Person[]>(() => initialSnapshot?.people ?? []);
@@ -173,6 +175,65 @@ export default function App() {
           }
         : currentEvent,
     );
+  };
+
+  const deleteEventThread = (threadId: string, mode: ThreadDeleteMode) => {
+    const normalizedThreadId = threadId.trim();
+
+    if (!normalizedThreadId) {
+      return;
+    }
+
+    const selectedEventInThread = selectedEvent?.threadId === normalizedThreadId;
+
+    setEvents((currentEvents) => {
+      if (mode === 'delete') {
+        return currentEvents.filter((event) => event.threadId !== normalizedThreadId);
+      }
+
+      return currentEvents.map((event) =>
+        event.threadId === normalizedThreadId
+          ? {
+              ...event,
+              threadId: undefined,
+            }
+          : event,
+      );
+    });
+
+    if (mode === 'delete' && selectedEventInThread) {
+      setShowEventDetails(false);
+    }
+
+    setSelectedEvent((currentEvent) => {
+      if (currentEvent?.threadId !== normalizedThreadId) {
+        return currentEvent;
+      }
+
+      if (mode === 'delete') {
+        return null;
+      }
+
+      return {
+        ...currentEvent,
+        threadId: undefined,
+      };
+    });
+
+    setEditingEvent((currentEvent) => {
+      if (currentEvent?.threadId !== normalizedThreadId) {
+        return currentEvent;
+      }
+
+      if (mode === 'delete') {
+        return null;
+      }
+
+      return {
+        ...currentEvent,
+        threadId: undefined,
+      };
+    });
   };
 
   const handleEventClick = (event: Event) => {
@@ -338,6 +399,7 @@ export default function App() {
                   people={people}
                   onEdit={setEditingEvent}
                   onDelete={deleteEvent}
+                  onDeleteThread={deleteEventThread}
                   onView={handleEventClick}
                   onFocusTimeline={handleFocusEventOnTimeline}
                   selectedEventId={selectedEvent?.id ?? null}

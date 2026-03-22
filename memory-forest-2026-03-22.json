@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "people": [
+    {
+      "id": "person-1773842687303",
+      "name": "崔",
+      "color": "#22c55e"
+    },
+    {
+      "id": "person-1773842691256",
+      "name": "蓝",
+      "color": "#0ea5e9"
+    },
+    {
+      "id": "person-1773842695809",
+      "name": "盘",
+      "color": "#fb923c"
+    },
+    {
+      "id": "person-1773842702018",
+      "name": "羊",
+      "color": "#eab308"
+    },
+    {
+      "id": "person-1773842709271",
+      "name": "沛",
+      "color": "#a855f7"
+    },
+    {
+      "id": "person-1773842719995",
+      "name": "刁",
+      "color": "#14b8a6"
+    },
+    {
+      "id": "person-1773842729582",
+      "name": "牛",
+      "color": "#0ea5e9"
+    }
+  ],
+  "events": [
+    {
+      "id": "event-1773842766242",
+      "title": "901开学",
+      "timestamp": 1598716800000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271",
+        "person-1773842719995",
+        "person-1773842729582"
+      ],
+      "color": "#3b82f6",
+      "threadId": "实验初中"
+    },
+    {
+      "id": "event-1773842846610",
+      "title": "中考",
+      "timestamp": 1623513600000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271",
+        "person-1773842719995",
+        "person-1773842729582"
+      ],
+      "color": "#3b82f6",
+      "threadId": "实验初中"
+    },
+    {
+      "id": "event-1773842944718",
+      "title": "st",
+      "timestamp": 1773590400000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842695809"
+      ],
+      "color": "#3b82f6",
+      "threadId": "1",
+      "interpretation": "打太极"
+    },
+    {
+      "id": "event-1773844061845",
+      "title": "初进一中",
+      "timestamp": 1629907200000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271",
+        "person-1773842719995",
+        "person-1773842729582"
+      ],
+      "color": "#3b82f6",
+      "threadId": "清洗异种"
+    },
+    {
+      "id": "event-1773844084000",
+      "title": "毕业典礼",
+      "timestamp": 1719158400000,
+      "personIds": [
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271",
+        "person-1773842719995",
+        "person-1773842729582"
+      ],
+      "color": "#3b82f6",
+      "threadId": "清洗异种"
+    },
+    {
+      "id": "event-1773844244036",
+      "title": "丽丽在目",
+      "timestamp": 1625241600000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271"
+      ],
+      "color": "#ec4899"
+    },
+    {
+      "id": "event-1773933744684",
+      "title": "底特律",
+      "timestamp": 1773763200000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842709271"
+      ],
+      "color": "#3b82f6",
+      "threadId": "开黑"
+    },
+    {
+      "id": "event-1773933802135",
+      "title": "南京pico",
+      "timestamp": 1767024000000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842709271"
+      ],
+      "color": "#3b82f6",
+      "threadId": "开黑"
+    }
+  ]
+}
