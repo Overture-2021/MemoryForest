@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Clock, Folder, FolderOpen, LocateFixed, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, Clock, Folder, FolderOpen, LocateFixed, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Event, Person } from '../types/thread-memories';
 import { formatDateInputValue } from '../utils/date-format';
@@ -235,6 +235,12 @@ export function EventsList({
                             <Clock className="h-3 w-3" />
                             <span>{getRelativeTime(event.timestamp)}</span>
                           </div>
+                          {event.location && (
+                            <div className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                          )}
                           {event.personIds.length > 0 && (
                             <div className="mt-0.5 truncate text-xs text-slate-500">
                               {getPeopleNames(event.personIds)}

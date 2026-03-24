@@ -89,6 +89,7 @@ export default function App() {
     timestamp: number,
     interpretation?: string,
     threadId?: string,
+    location?: string,
   ) => {
     const newEvent: Event = {
       id: `event-${Date.now()}`,
@@ -96,6 +97,7 @@ export default function App() {
       timestamp,
       personIds,
       color,
+      location,
       interpretation,
       threadId,
     };
@@ -110,6 +112,7 @@ export default function App() {
     timestamp: number,
     interpretation?: string,
     threadId?: string,
+    location?: string,
   ) => {
     setEvents(
       events.map((e) =>
@@ -120,6 +123,7 @@ export default function App() {
               personIds,
               color,
               timestamp,
+              location,
               interpretation,
               threadId,
             }

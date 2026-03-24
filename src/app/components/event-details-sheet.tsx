@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Event, Person } from '../types/thread-memories';
-import { Calendar, Users, Tag, MessageSquare, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Users, Tag, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
@@ -103,6 +103,16 @@ export function EventDetailsSheet({
                 {formatDateTimeValue(eventDate)}
               </p>
             </div>
+
+            {event.location && (
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span>Location</span>
+                </div>
+                <p className="pl-6 text-sm leading-6 text-slate-800">{event.location}</p>
+              </div>
+            )}
 
             {/* People involved */}
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">

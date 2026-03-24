@@ -10,6 +10,7 @@ export interface Event {
   timestamp: number;
   personIds: string[];
   color: string;
+  location?: string;
   interpretation?: string;
   threadId?: string; // For event-based organization
 }

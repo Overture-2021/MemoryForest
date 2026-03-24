@@ -53,7 +53,7 @@ interface EventLabelLayout {
   connectorX: number;
   height: number;
   interpretationLines: string[];
-  metaLabel: string;
+  metaLines: string[];
   textX: number;
   titleLines: string[];
   width: number;
@@ -341,6 +341,7 @@ function getEventLabelLayout(
   y: number,
   svgWidth: number,
   title: string,
+  location: string | undefined,
   interpretation: string | undefined,
   timestamp: number,
   participantCount: number,
@@ -354,12 +355,16 @@ function getEventLabelLayout(
   const titleLines = wrapText(title, maxChars, 2);
   const interpretationLines = interpretation ? wrapText(interpretation, maxChars, 2) : [];
   const dateLabel = formatDateTimeValue(new Date(timestamp));
-  const participantLabel = `${participantCount} ☺︎`;
-  const metaLabel = `${dateLabel} • ${participantLabel}`;
+  const participantLabel = participantCount === 1 ? '1 person' : `${participantCount} people`;
+  const metaLines = [
+    dateLabel,
+    participantLabel,
+    ...(location ? [truncateText(`Location: ${location}`, maxChars)] : []),
+  ];
   const longestLine = Math.max(
     ...titleLines.map((line) => line.length),
     ...interpretationLines.map((line) => line.length),
-    metaLabel.length,
+    ...metaLines.map((line) => line.length),
     16,
   );
   const width = clamp(longestLine * 6.6 + EVENT_LABEL_HORIZONTAL_PADDING * 2, minWidth, maxWidth);
@@ -369,12 +374,13 @@ function getEventLabelLayout(
     ? Math.min(preferredRightX, svgWidth - width - 12)
     : Math.max(12, x - width - 16);
   const titleHeight = titleLines.length * EVENT_LABEL_TITLE_LINE_HEIGHT;
+  const metaHeight = metaLines.length * EVENT_LABEL_META_LINE_HEIGHT;
   const interpretationHeight = interpretationLines.length * EVENT_LABEL_META_LINE_HEIGHT;
   const height =
     EVENT_LABEL_VERTICAL_PADDING * 2 +
     titleHeight +
     EVENT_LABEL_SECTION_GAP +
-    EVENT_LABEL_META_LINE_HEIGHT +
+    metaHeight +
     (interpretationLines.length > 0
       ? EVENT_LABEL_SECTION_GAP + interpretationHeight
       : 0);
@@ -383,7 +389,7 @@ function getEventLabelLayout(
     connectorX: placeOnRight ? labelX : labelX + width,
     height,
     interpretationLines,
-    metaLabel,
+    metaLines,
     textX: labelX + EVENT_LABEL_HORIZONTAL_PADDING,
     titleLines,
     width,
@@ -1057,6 +1063,7 @@ export function ThreadCanvas({
         node.y,
         svgWidth,
         node.event.title,
+        node.event.location,
         node.event.interpretation,
         node.event.timestamp,
         node.event.personIds.length,
@@ -1548,7 +1555,15 @@ export function ThreadCanvas({
                     className="select-none"
                     dominantBaseline="hanging"
                   >
-                    {labelLayout.metaLabel}
+                    {labelLayout.metaLines.map((line, index) => (
+                      <tspan
+                        key={`${event.id}-meta-${index}`}
+                        x={labelLayout.textX}
+                        dy={index === 0 ? 0 : EVENT_LABEL_META_LINE_HEIGHT}
+                      >
+                        {line}
+                      </tspan>
+                    ))}
                   </text>
 
                   {labelLayout.interpretationLines.length > 0 && (
@@ -1559,7 +1574,7 @@ export function ThreadCanvas({
                         EVENT_LABEL_VERTICAL_PADDING +
                         labelLayout.titleLines.length * EVENT_LABEL_TITLE_LINE_HEIGHT +
                         EVENT_LABEL_SECTION_GAP +
-                        EVENT_LABEL_META_LINE_HEIGHT +
+                        labelLayout.metaLines.length * EVENT_LABEL_META_LINE_HEIGHT +
                         EVENT_LABEL_SECTION_GAP
                       }
                       fontSize="11"

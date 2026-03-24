@@ -35,6 +35,7 @@ function isEvent(value: unknown): value is Event {
     Array.isArray(event.personIds) &&
     event.personIds.every((personId) => typeof personId === 'string') &&
     typeof event.color === 'string' &&
+    (event.location === undefined || typeof event.location === 'string') &&
     (event.interpretation === undefined || typeof event.interpretation === 'string') &&
     (event.threadId === undefined || typeof event.threadId === 'string')
   );

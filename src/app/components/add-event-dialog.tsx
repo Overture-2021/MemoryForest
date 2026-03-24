@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { Person, Event, EVENT_COLORS } from '../types/thread-memories';
 import { formatDateInputValue, formatTimeValue, isValidDateInputValue } from '../utils/date-format';
@@ -11,8 +10,25 @@ import { formatDateInputValue, formatTimeValue, isValidDateInputValue } from '..
 interface AddEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (title: string, personIds: string[], color: string, timestamp: number, interpretation?: string, threadId?: string) => void;
-  onUpdate?: (id: string, title: string, personIds: string[], color: string, timestamp: number, interpretation?: string, threadId?: string) => void;
+  onAdd: (
+    title: string,
+    personIds: string[],
+    color: string,
+    timestamp: number,
+    interpretation?: string,
+    threadId?: string,
+    location?: string,
+  ) => void;
+  onUpdate?: (
+    id: string,
+    title: string,
+    personIds: string[],
+    color: string,
+    timestamp: number,
+    interpretation?: string,
+    threadId?: string,
+    location?: string,
+  ) => void;
   editingEvent?: Event | null;
   people: Person[];
 }
@@ -20,6 +36,7 @@ interface AddEventDialogProps {
 export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEvent, people }: AddEventDialogProps) {
   const isEditing = !!editingEvent;
   const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
   const [interpretation, setInterpretation] = useState('');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState(EVENT_COLORS[0]);
@@ -31,6 +48,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
+      setLocation(editingEvent.location || '');
       setInterpretation(editingEvent.interpretation || '');
       setSelectedPeople(editingEvent.personIds);
       setSelectedColor(editingEvent.color);
@@ -43,6 +61,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       setEventTime(formatTimeValue(date));
     } else {
       setTitle('');
+      setLocation('');
       setInterpretation('');
       setSelectedPeople([]);
       setSelectedColor(EVENT_COLORS[0]);
@@ -79,7 +98,8 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
           selectedColor,
           timestamp,
           interpretation.trim() || undefined,
-          threadId.trim() || undefined
+          threadId.trim() || undefined,
+          location.trim() || undefined
         );
       } else {
         onAdd(
@@ -88,10 +108,12 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
           selectedColor,
           timestamp,
           interpretation.trim() || undefined,
-          threadId.trim() || undefined
+          threadId.trim() || undefined,
+          location.trim() || undefined
         );
       }
       setTitle('');
+      setLocation('');
       setInterpretation('');
       setSelectedPeople([]);
       setThreadId('');
@@ -110,12 +132,12 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-6">
           <DialogTitle>{isEditing ? 'Edit Event' : 'Add Event'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             <div className="space-y-2">
               <Label htmlFor="event-title">Event Title</Label>
               <Input
@@ -124,6 +146,16 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="E.g., Team lunch, Project kickoff"
                 autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="event-location">Location (Optional)</Label>
+              <Input
+                id="event-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="E.g., Central Park, New York"
               />
             </div>
 
@@ -225,7 +257,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
