@@ -147,6 +147,77 @@
       ],
       "color": "#3b82f6",
       "threadId": "开黑"
+    },
+    {
+      "id": "event-1774318573531",
+      "title": "过山车",
+      "timestamp": 1625932800000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271"
+      ],
+      "color": "#3b82f6",
+      "interpretation": "蓝盘yes",
+      "location": "融创茂"
+    },
+    {
+      "id": "event-1774318957911",
+      "title": "啥动物啥偷吃剧本杀",
+      "timestamp": 1627056000000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271"
+      ],
+      "color": "#ec4899",
+      "interpretation": "蓝盘cp第一次出场",
+      "location": "风和日丽"
+    },
+    {
+      "id": "event-1774320363822",
+      "title": "羽毛球",
+      "timestamp": 1628956800000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271"
+      ],
+      "color": "#3b82f6",
+      "location": "实验初中"
+    },
+    {
+      "id": "event-1774320473669",
+      "title": "羽毛球",
+      "timestamp": 1628265600000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842709271",
+        "person-1773842702018"
+      ],
+      "color": "#3b82f6",
+      "location": "乒羽",
+      "interpretation": "故  事  会"
+    },
+    {
+      "id": "event-1774320546297",
+      "title": "盘子家",
+      "timestamp": 1628438400000,
+      "personIds": [
+        "person-1773842687303",
+        "person-1773842691256",
+        "person-1773842695809",
+        "person-1773842702018",
+        "person-1773842709271"
+      ],
+      "color": "#3b82f6",
+      "location": "盘子家"
     }
   ]
 }
