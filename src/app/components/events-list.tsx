@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Clock, Folder, FolderOpen, LocateFixed, MapPin, Pencil, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Folder,
+  FolderOpen,
+  LocateFixed,
+  MapPin,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { Event, Person } from '../types/thread-memories';
 import { formatDateInputValue } from '../utils/date-format';
@@ -59,6 +70,8 @@ export function EventsList({
 }: EventsListProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [groupPendingDeletion, setGroupPendingDeletion] = useState<EventGroup | null>(null);
+
+  const isGroupExpanded = (groupId: string) => expandedGroups[groupId] ?? false;
 
   const getRelativeTime = (timestamp: number) => {
     const now = Date.now();
@@ -146,6 +159,18 @@ export function EventsList({
     }));
   };
 
+  const setAllGroupsOpen = (open: boolean) => {
+    setExpandedGroups(
+      eventGroups.reduce<Record<string, boolean>>((accumulator, group) => {
+        accumulator[group.id] = open;
+        return accumulator;
+      }, {}),
+    );
+  };
+
+  const allGroupsExpanded = eventGroups.length > 0 && eventGroups.every((group) => isGroupExpanded(group.id));
+  const allGroupsCollapsed = eventGroups.length > 0 && eventGroups.every((group) => !isGroupExpanded(group.id));
+
   const closeDeleteThreadDialog = () => {
     setGroupPendingDeletion(null);
   };
@@ -153,174 +178,208 @@ export function EventsList({
   return (
     <>
       <div className="space-y-2">
-        {eventGroups.map((group) => {
-          const isOpen = expandedGroups[group.id] ?? true;
-          const isThreadGroup = group.id !== UNTHREADED_GROUP_ID;
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-slate-700">Events</h3>
+          {eventGroups.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs text-slate-600"
+                onClick={() => setAllGroupsOpen(true)}
+                disabled={allGroupsExpanded}
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                Expand all
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs text-slate-600"
+                onClick={() => setAllGroupsOpen(false)}
+                disabled={allGroupsCollapsed}
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                Collapse all
+              </Button>
+            </div>
+          )}
+        </div>
 
-          return (
-            <Collapsible
-              key={group.id}
-              open={isOpen}
-              onOpenChange={(open) => toggleGroup(group.id, open)}
-            >
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70">
-                <div className="flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-white/70">
-                  <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left">
-                    <ChevronRight
-                      className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
-                        isOpen ? 'rotate-90' : ''
-                      }`}
-                    />
-                    {isOpen ? (
-                      <FolderOpen className="h-4 w-4 shrink-0 text-slate-600" />
-                    ) : (
-                      <Folder className="h-4 w-4 shrink-0 text-slate-600" />
-                    )}
-                    <div
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: group.color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-slate-800">
-                        {group.label}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-                        <span>
-                          {group.events.length} event{group.events.length === 1 ? '' : 's'}
-                        </span>
-                        <span aria-hidden="true">{'\u2022'}</span>
-                        <span>{getRelativeTime(group.latestTimestamp)}</span>
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
+        {eventGroups.length === 0 ? (
+          <p className="text-sm text-slate-500">No events added yet</p>
+        ) : (
+          eventGroups.map((group) => {
+            const isOpen = isGroupExpanded(group.id);
+            const isThreadGroup = group.id !== UNTHREADED_GROUP_ID;
 
-                  {isThreadGroup && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 shrink-0 p-0 text-slate-500 hover:bg-red-50 hover:text-red-600"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setGroupPendingDeletion(group);
-                      }}
-                      title={`Delete thread ${group.label}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete thread {group.label}</span>
-                    </Button>
-                  )}
-                </div>
-
-                <CollapsibleContent className="space-y-1 border-t border-slate-200/80 px-2 py-2">
-                  {group.events.map((event) => {
-                    const isSelected = event.id === selectedEventId;
-
-                    return (
-                      <div
-                        key={event.id}
-                        className={`group flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors ${
-                          isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-white'
+            return (
+              <Collapsible
+                key={group.id}
+                open={isOpen}
+                onOpenChange={(open) => toggleGroup(group.id, open)}
+              >
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70">
+                  <div className="flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-white/70">
+                    <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left">
+                      <ChevronRight
+                        className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
+                          isOpen ? 'rotate-90' : ''
                         }`}
-                        onClick={() => onView?.(event)}
-                      >
-                        <div
-                          className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-full"
-                          style={{ backgroundColor: event.color }}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-slate-800">
-                            {event.title}
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-                            <Clock className="h-3 w-3" />
-                            <span>{getRelativeTime(event.timestamp)}</span>
-                          </div>
-                          {event.location && (
-                            <div className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
-                              <MapPin className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{event.location}</span>
-                            </div>
-                          )}
-                          {event.personIds.length > 0 && (
-                            <div className="mt-0.5 truncate text-xs text-slate-500">
-                              {getPeopleNames(event.personIds)}
-                            </div>
-                          )}
+                      />
+                      {isOpen ? (
+                        <FolderOpen className="h-4 w-4 shrink-0 text-slate-600" />
+                      ) : (
+                        <Folder className="h-4 w-4 shrink-0 text-slate-600" />
+                      )}
+                      <div
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: group.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-slate-800">
+                          {group.label}
                         </div>
-
-                        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onFocusTimeline?.(event);
-                            }}
-                            className="h-7 w-7 p-0"
-                            title="Center on timeline at 1281% zoom"
-                          >
-                            <LocateFixed className="h-3 w-3" />
-                            <span className="sr-only">
-                              Center {event.title} on the timeline at 1281% zoom
-                            </span>
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(event);
-                            }}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Pencil className="h-3 w-3" />
-                            <span className="sr-only">Edit {event.title}</span>
-                          </Button>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                <span className="sr-only">Delete {event.title}</span>
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete "{event.title}"?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete this event. This action cannot be
-                                  undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(event.id);
-                                  }}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                          <span>
+                            {group.events.length} event{group.events.length === 1 ? '' : 's'}
+                          </span>
+                          <span aria-hidden="true">{'\u2022'}</span>
+                          <span>{getRelativeTime(group.latestTimestamp)}</span>
                         </div>
                       </div>
-                    );
-                  })}
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          );
-        })}
+                    </CollapsibleTrigger>
+
+                    {isThreadGroup && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0 p-0 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setGroupPendingDeletion(group);
+                        }}
+                        title={`Delete thread ${group.label}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete thread {group.label}</span>
+                      </Button>
+                    )}
+                  </div>
+
+                  <CollapsibleContent className="space-y-1 border-t border-slate-200/80 px-2 py-2">
+                    {group.events.map((event) => {
+                      const isSelected = event.id === selectedEventId;
+
+                      return (
+                        <div
+                          key={event.id}
+                          className={`group flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors ${
+                            isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-white'
+                          }`}
+                          onClick={() => onView?.(event)}
+                        >
+                          <div
+                            className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-full"
+                            style={{ backgroundColor: event.color }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium text-slate-800">
+                              {event.title}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                              <Clock className="h-3 w-3" />
+                              <span>{getRelativeTime(event.timestamp)}</span>
+                            </div>
+                            {event.location && (
+                              <div className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{event.location}</span>
+                              </div>
+                            )}
+                            {event.personIds.length > 0 && (
+                              <div className="mt-0.5 truncate text-xs text-slate-500">
+                                {getPeopleNames(event.personIds)}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onFocusTimeline?.(event);
+                              }}
+                              className="h-7 w-7 p-0"
+                              title="Center on timeline at 1281% zoom"
+                            >
+                              <LocateFixed className="h-3 w-3" />
+                              <span className="sr-only">
+                                Center {event.title} on the timeline at 1281% zoom
+                              </span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(event);
+                              }}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              <span className="sr-only">Edit {event.title}</span>
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  <span className="sr-only">Delete {event.title}</span>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete "{event.title}"?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete this event. This action cannot be
+                                    undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDelete(event.id);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            );
+          })
+        )}
       </div>
 
       <Dialog open={!!groupPendingDeletion} onOpenChange={(open) => !open && closeDeleteThreadDialog()}>

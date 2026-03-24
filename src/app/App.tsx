@@ -394,21 +394,16 @@ export default function App() {
             </Card>
 
             <Card className="p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">Events</h3>
-              {events.length === 0 ? (
-                <p className="text-sm text-slate-500">No events added yet</p>
-              ) : (
-                <EventsList
-                  events={events}
-                  people={people}
-                  onEdit={setEditingEvent}
-                  onDelete={deleteEvent}
-                  onDeleteThread={deleteEventThread}
-                  onView={handleEventClick}
-                  onFocusTimeline={handleFocusEventOnTimeline}
-                  selectedEventId={selectedEvent?.id ?? null}
-                />
-              )}
+              <EventsList
+                events={events}
+                people={people}
+                onEdit={setEditingEvent}
+                onDelete={deleteEvent}
+                onDeleteThread={deleteEventThread}
+                onView={handleEventClick}
+                onFocusTimeline={handleFocusEventOnTimeline}
+                selectedEventId={selectedEvent?.id ?? null}
+              />
             </Card>
 
             <Card className="p-4">
