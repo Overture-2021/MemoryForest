@@ -40,6 +40,7 @@ const EVENT_TAG_THREAD_OFFSET = 18;
 const GRID_RENDER_BUFFER = 240;
 const EVENT_FOCUS_ZOOM_PERCENT = 1281;
 const EVENT_FOCUS_ZOOM = (INITIAL_VERTICAL_ZOOM * EVENT_FOCUS_ZOOM_PERCENT) / 100;
+const THREAD_GUTTER_GAP = 28;
 
 interface BoxLayout {
   height: number;
@@ -792,6 +793,7 @@ export function ThreadCanvas({
     const svgWidth = Math.max(MIN_CANVAS_WIDTH, canvasWidth);
     const sideMargin = clamp(svgWidth * 0.08, 52, 100);
     const rightMargin = clamp(svgWidth * 0.14, 96, 150);
+    const threadStartX = sideMargin + THREAD_GUTTER_GAP;
 
     const timestamps = events.map((e) => e.timestamp);
     const hasEvents = timestamps.length > 0;
@@ -954,16 +956,16 @@ export function ThreadCanvas({
     const columns = [...personColumns, ...eventThreadColumns];
     const eventThreadColorById = new Map(eventThreadColumns.map((col) => [col.id, col.color]));
 
-    const availableWidth = Math.max(svgWidth - sideMargin - rightMargin, 160);
-    const minThreadX = sideMargin;
-    const maxThreadX = sideMargin + availableWidth;
+    const availableWidth = Math.max(svgWidth - threadStartX - rightMargin, 160);
+    const minThreadX = threadStartX;
+    const maxThreadX = threadStartX + availableWidth;
     const personSpacing =
       personColumns.length > 1 ? availableWidth / (personColumns.length - 1) : availableWidth / 2;
 
     personColumns.forEach((col, index) => {
       positions.set(
         col.id,
-        sideMargin + (personColumns.length === 1 ? availableWidth / 2 : index * personSpacing),
+        threadStartX + (personColumns.length === 1 ? availableWidth / 2 : index * personSpacing),
       );
     });
     const personThreadPositions = personColumns
@@ -987,9 +989,9 @@ export function ThreadCanvas({
             ? getSharedEventX(
                 linkedPersonPositions,
                 personThreadPositions,
-                sideMargin + availableWidth / 2,
+                threadStartX + availableWidth / 2,
               )
-            : sideMargin + availableWidth / 2;
+            : threadStartX + availableWidth / 2;
 
         return {
           id: col.id,
@@ -1039,9 +1041,9 @@ export function ThreadCanvas({
             ? getSharedEventX(
                 personPositions,
                 personThreadPositions,
-                sideMargin + availableWidth / 2,
+                threadStartX + availableWidth / 2,
               )
-            : sideMargin + availableWidth / 2;
+            : threadStartX + availableWidth / 2;
       }
 
       return {
@@ -1319,6 +1321,10 @@ export function ThreadCanvas({
                     fill={style.textFill}
                     fontSize={style.fontSize}
                     fontWeight={style.fontWeight}
+                    stroke="rgba(255, 255, 255, 0.96)"
+                    strokeWidth="5"
+                    strokeLinejoin="round"
+                    paintOrder="stroke"
                     className="pointer-events-none select-none"
                   >
                     {line.label}
