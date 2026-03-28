@@ -91,12 +91,14 @@ function getPersonEventConnectorPath(
   totalPeople: number,
 ) {
   const distance = Math.abs(eventX - threadX);
-  const baseCurveHeight = clamp(distance * 0.22, 20, 56);
   const centeredIndex = personIndex - (totalPeople - 1) / 2;
-  const fanHeight = Math.abs(centeredIndex) * 8;
-  const controlY = eventY + baseCurveHeight + fanHeight;
+  const fanHeight = Math.abs(centeredIndex) * 10;
+  const branchRise = clamp(distance * 0.28, 28, 82) + fanHeight;
+  const startY = eventY + branchRise;
+  const startControlY = startY - branchRise * 0.32;
+  const endControlY = eventY + branchRise * 0.4;
 
-  return `M ${threadX} ${eventY} C ${threadX} ${controlY}, ${eventX} ${controlY}, ${eventX} ${eventY}`;
+  return `M ${threadX} ${startY} C ${threadX} ${startControlY}, ${eventX} ${endControlY}, ${eventX} ${eventY}`;
 }
 
 function clamp(value: number, min: number, max: number) {
