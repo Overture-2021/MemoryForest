@@ -18,7 +18,8 @@ function isPerson(value: unknown): value is Person {
   return (
     typeof person.id === 'string' &&
     typeof person.name === 'string' &&
-    typeof person.color === 'string'
+    typeof person.color === 'string' &&
+    (person.photo === undefined || typeof person.photo === 'string')
   );
 }
 

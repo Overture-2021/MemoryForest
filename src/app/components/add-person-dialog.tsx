@@ -1,22 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { PERSON_COLORS, Person } from '../types/thread-memories';
+import { PersonAvatar } from './person-avatar';
 
 interface AddPersonDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (name: string, color: string) => void;
-  onEdit?: (id: string, name: string, color: string) => void;
+  onAdd: (name: string, color: string, photo?: string) => void;
+  onEdit?: (id: string, name: string, color: string, photo?: string) => void;
   editingPerson?: Person | null;
   usedColors: string[];
 }
 
-export function AddPersonDialog({ open, onOpenChange, onAdd, onEdit, editingPerson, usedColors }: AddPersonDialogProps) {
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Failed to load the selected image.'));
+    image.src = src;
+  });
+}
+
+async function convertImageToProfilePhoto(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const maxDimension = 256;
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Failed to prepare the selected image.');
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    return canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.86);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+export function AddPersonDialog({
+  open,
+  onOpenChange,
+  onAdd,
+  onEdit,
+  editingPerson,
+  usedColors,
+}: AddPersonDialogProps) {
   const isEditing = !!editingPerson;
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState('');
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [selectedColor, setSelectedColor] = useState(
     PERSON_COLORS.find(c => !usedColors.includes(c)) || PERSON_COLORS[0]
   );
@@ -25,21 +72,49 @@ export function AddPersonDialog({ open, onOpenChange, onAdd, onEdit, editingPers
     if (editingPerson) {
       setName(editingPerson.name);
       setSelectedColor(editingPerson.color);
+      setPhoto(editingPerson.photo);
     } else {
       setName('');
       setSelectedColor(PERSON_COLORS.find(c => !usedColors.includes(c)) || PERSON_COLORS[0]);
+      setPhoto(undefined);
     }
+    setPhotoError(null);
+    setIsProcessingPhoto(false);
   }, [editingPerson, usedColors]);
+
+  const handlePhotoSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setIsProcessingPhoto(true);
+      setPhotoError(null);
+      const nextPhoto = await convertImageToProfilePhoto(file);
+      setPhoto(nextPhoto);
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error ? error.message : 'Failed to process the selected image.',
+      );
+    } finally {
+      setIsProcessingPhoto(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
       if (isEditing && editingPerson && onEdit) {
-        onEdit(editingPerson.id, name.trim(), selectedColor);
+        onEdit(editingPerson.id, name.trim(), selectedColor, photo);
       } else {
-        onAdd(name.trim(), selectedColor);
+        onAdd(name.trim(), selectedColor, photo);
       }
       setName('');
+      setPhoto(undefined);
+      setPhotoError(null);
       setSelectedColor(PERSON_COLORS.find(c => !usedColors.includes(c) && c !== selectedColor) || PERSON_COLORS[0]);
       onOpenChange(false);
     }
@@ -62,6 +137,53 @@ export function AddPersonDialog({ open, onOpenChange, onAdd, onEdit, editingPers
                 placeholder="Enter person's name"
                 autoFocus
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Profile Photo</Label>
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <PersonAvatar
+                  person={{
+                    name: name.trim() || 'Person',
+                    color: selectedColor,
+                    photo,
+                  }}
+                  className="size-14"
+                />
+                <div className="min-w-[180px] flex-1">
+                  <p className="text-sm font-medium text-slate-700">
+                    {photo ? 'Photo ready' : 'No photo selected'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Shown in the people list and above the timeline thread.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={isProcessingPhoto}
+                  >
+                    {isProcessingPhoto ? 'Processing...' : photo ? 'Replace Photo' : 'Upload Photo'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setPhoto(undefined)}
+                    disabled={!photo || isProcessingPhoto}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelection}
+              />
+              {photoError ? <p className="text-xs text-red-600">{photoError}</p> : null}
             </div>
             <div className="space-y-2">
               <Label>Thread Color</Label>

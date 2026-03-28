@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Person, Event } from '../types/thread-memories';
 import { formatDateTimeValue } from '../utils/date-format';
+import { PersonAvatar } from './person-avatar';
 
 interface ThreadCanvasProps {
   people: Person[];
@@ -942,6 +943,7 @@ export function ThreadCanvas({
       color: person.color,
       id: person.id,
       name: person.name,
+      photo: person.photo,
       type: 'person' as const,
     }));
     const eventThreadColumns = eventThreads.map((threadId) => {
@@ -1225,16 +1227,10 @@ export function ThreadCanvas({
                 transform: `translateX(-50%) scale(${isHighlighted ? 1.04 : 1})`,
               }}
             >
-              <div
-                className="mb-1.5 h-3 w-3 shadow-sm"
-                style={{
-                  backgroundColor: col.color,
-                  borderRadius: '50%',
-                  boxShadow:
-                    isHighlighted
-                      ? `0 0 0 4px ${col.color}22, 0 4px 10px ${col.color}33`
-                      : undefined,
-                }}
+              <PersonAvatar
+                person={col}
+                className="mb-1.5 size-7"
+                highlighted={isHighlighted}
               />
               <span
                 className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Person } from '../types/thread-memories';
+import { PersonAvatar } from './person-avatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +27,9 @@ export function PeopleList({ people, onEdit, onDelete }: PeopleListProps) {
       {people.map(person => (
         <div 
           key={person.id} 
-          className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 group"
+          className="group flex items-center gap-3 rounded p-2 hover:bg-slate-50"
         >
-          <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ backgroundColor: person.color }}
-          />
+          <PersonAvatar person={person} className="size-7 flex-shrink-0" />
           <span className="text-sm flex-1">{person.name}</span>
           
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

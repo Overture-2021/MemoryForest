@@ -2,6 +2,7 @@ export interface Person {
   id: string;
   name: string;
   color: string;
+  photo?: string;
 }
 
 export interface Event {

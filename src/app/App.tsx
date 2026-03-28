@@ -56,17 +56,18 @@ export default function App() {
     setTimelineFocusRequest(null);
   };
 
-  const addPerson = (name: string, color: string) => {
+  const addPerson = (name: string, color: string, photo?: string) => {
     const newPerson: Person = {
       id: `person-${Date.now()}`,
       name,
       color,
+      photo,
     };
     setPeople([...people, newPerson]);
   };
 
-  const updatePerson = (id: string, name: string, color: string) => {
-    setPeople(people.map((p) => (p.id === id ? { ...p, name, color } : p)));
+  const updatePerson = (id: string, name: string, color: string, photo?: string) => {
+    setPeople(people.map((p) => (p.id === id ? { ...p, name, color, photo } : p)));
     setEditingPerson(null);
   };
 
