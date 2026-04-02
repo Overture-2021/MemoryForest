@@ -90,15 +90,18 @@ function getPersonEventConnectorPath(
   personIndex: number,
   totalPeople: number,
 ) {
-  const distance = Math.abs(eventX - threadX);
+  const offsetX = eventX - threadX;
+  const distance = Math.abs(offsetX);
   const centeredIndex = personIndex - (totalPeople - 1) / 2;
   const fanHeight = Math.abs(centeredIndex) * 10;
-  const branchRise = clamp(distance * 0.28, 28, 82) + fanHeight;
+  const branchRise = clamp(distance * 0.42, 32, 180) + fanHeight;
   const startY = eventY + branchRise;
-  const startControlY = startY - branchRise * 0.32;
-  const endControlY = eventY + branchRise * 0.4;
+  const startControlX = threadX + offsetX * 0.12;
+  const endControlX = eventX - offsetX * 0.18;
+  const startControlY = startY - branchRise * 0.46;
+  const endControlY = eventY + branchRise * 0.24;
 
-  return `M ${threadX} ${startY} C ${threadX} ${startControlY}, ${eventX} ${endControlY}, ${eventX} ${eventY}`;
+  return `M ${threadX} ${startY} C ${startControlX} ${startControlY}, ${endControlX} ${endControlY}, ${eventX} ${eventY}`;
 }
 
 function clamp(value: number, min: number, max: number) {
