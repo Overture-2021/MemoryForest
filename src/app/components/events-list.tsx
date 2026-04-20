@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -95,36 +95,40 @@ export function EventsList({
       .filter(Boolean)
       .join(', ');
 
-  const eventGroups = events.reduce<EventGroup[]>((groups, event) => {
-    const normalizedThreadId = event.threadId?.trim();
-    const groupId = getEventGroupId(event);
-    const existingGroup = groups.find((group) => group.id === groupId);
+  const eventGroups = useMemo(() => {
+    const groups = events.reduce<EventGroup[]>((accumulator, event) => {
+      const normalizedThreadId = event.threadId?.trim();
+      const groupId = getEventGroupId(event);
+      const existingGroup = accumulator.find((group) => group.id === groupId);
 
-    if (existingGroup) {
-      existingGroup.events.push(event);
-      existingGroup.latestTimestamp = Math.max(existingGroup.latestTimestamp, event.timestamp);
-      return groups;
-    }
+      if (existingGroup) {
+        existingGroup.events.push(event);
+        existingGroup.latestTimestamp = Math.max(existingGroup.latestTimestamp, event.timestamp);
+        return accumulator;
+      }
 
-    groups.push({
-      id: groupId,
-      label: normalizedThreadId || 'Standalone Events',
-      events: [event],
-      latestTimestamp: event.timestamp,
-      color: event.color,
+      accumulator.push({
+        id: groupId,
+        label: normalizedThreadId || 'Standalone Events',
+        events: [event],
+        latestTimestamp: event.timestamp,
+        color: event.color,
+      });
+
+      return accumulator;
+    }, []);
+
+    groups.forEach((group) => {
+      group.events.sort((a, b) => b.timestamp - a.timestamp);
+    });
+    groups.sort((a, b) => {
+      if (a.id === UNTHREADED_GROUP_ID) return -1;
+      if (b.id === UNTHREADED_GROUP_ID) return 1;
+      return b.latestTimestamp - a.latestTimestamp;
     });
 
     return groups;
-  }, []);
-
-  eventGroups.forEach((group) => {
-    group.events.sort((a, b) => b.timestamp - a.timestamp);
-  });
-  eventGroups.sort((a, b) => {
-    if (a.id === UNTHREADED_GROUP_ID) return -1;
-    if (b.id === UNTHREADED_GROUP_ID) return 1;
-    return b.latestTimestamp - a.latestTimestamp;
-  });
+  }, [events]);
 
   useEffect(() => {
     setExpandedGroups((currentGroups) => {
