@@ -138,33 +138,33 @@ function getGridLineStyle(level: GridLineLevel) {
       return {
         fontSize: 12,
         fontWeight: 600,
-        stroke: '#cbd5e1',
+        stroke: 'rgba(29, 29, 27, 0.36)',
         strokeDasharray: undefined,
-        textFill: '#475569',
+        textFill: '#1d1d1b',
       };
     case 'month':
       return {
         fontSize: 11,
         fontWeight: 600,
-        stroke: '#dbeafe',
-        strokeDasharray: '6,4',
-        textFill: '#64748b',
+        stroke: 'rgba(90, 143, 184, 0.42)',
+        strokeDasharray: '7,7',
+        textFill: '#5d5d55',
       };
     case 'day':
       return {
         fontSize: 10,
         fontWeight: 500,
-        stroke: '#e2e8f0',
-        strokeDasharray: '4,4',
-        textFill: '#94a3b8',
+        stroke: 'rgba(29, 29, 27, 0.18)',
+        strokeDasharray: '3,8',
+        textFill: '#6d6d66',
       };
     case 'hour':
       return {
         fontSize: 10,
         fontWeight: 500,
-        stroke: '#f1f5f9',
-        strokeDasharray: '2,6',
-        textFill: '#94a3b8',
+        stroke: 'rgba(29, 29, 27, 0.11)',
+        strokeDasharray: '2,10',
+        textFill: '#6d6d66',
       };
   }
 }
@@ -1206,9 +1206,9 @@ export function ThreadCanvas({
   return (
     <div
       ref={containerRef}
-      className="flex h-full min-h-[420px] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-inner"
+      className="memory-forest-thread-canvas flex h-full min-h-[420px] w-full flex-col overflow-hidden"
     >
-      <div className="relative z-20 h-[60px] w-full shrink-0 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
+      <div className="memory-forest-thread-header relative z-20 h-[60px] w-full shrink-0">
         {personColumns.map((col) => {
           const x = threadPositions.get(col.id);
           if (x === undefined) return null;
@@ -1225,7 +1225,7 @@ export function ThreadCanvas({
               aria-pressed={isSelected}
               aria-label={`${isSelected ? 'Clear highlight for' : 'Highlight'} ${col.name}'s thread`}
               title={isSelected ? `Clear ${col.name} highlight` : `Highlight ${col.name} thread`}
-              className="absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center rounded-md px-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="memory-forest-person-tab absolute top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center px-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
               style={{
                 left: x,
                 opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.45) : 1,
@@ -1238,12 +1238,12 @@ export function ThreadCanvas({
                 highlighted={isHighlighted}
               />
               <span
-                className="whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white shadow-sm"
+                className="memory-forest-person-label whitespace-nowrap px-2 py-0.5 text-xs font-semibold shadow-sm"
                 style={{
                   backgroundColor: col.color,
                   boxShadow:
                     isHighlighted
-                      ? `0 0 0 2px white, 0 8px 18px ${col.color}33`
+                      ? `1px 2px 0 #1d1d1b, 0 0 0 3px ${col.color}33`
                       : undefined,
                 }}
               >
@@ -1259,7 +1259,7 @@ export function ThreadCanvas({
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       >
         <div className="sticky top-3 z-20 ml-auto mr-3 mt-3 flex h-0 w-fit justify-end">
-          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md">
+          <div className="memory-forest-zoom flex items-center gap-1 px-2 py-1 text-xs font-medium">
             <button
               type="button"
               onClick={() => setAnchoredVerticalZoom(verticalZoom / ZOOM_STEP)}
@@ -1299,7 +1299,7 @@ export function ThreadCanvas({
             height="100%"
             viewBox={`0 0 ${svgWidth} ${totalHeight}`}
             preserveAspectRatio="none"
-            className="absolute inset-0"
+            className="memory-forest-timeline absolute inset-0"
           >
             {gridLines.map((line) => {
               const y = getY(line.time);
@@ -1322,7 +1322,7 @@ export function ThreadCanvas({
                     fill={style.textFill}
                     fontSize={style.fontSize}
                     fontWeight={style.fontWeight}
-                    stroke="rgba(255, 255, 255, 0.96)"
+                    stroke="rgba(251, 251, 247, 0.96)"
                     strokeWidth="5"
                     strokeLinejoin="round"
                     paintOrder="stroke"
@@ -1350,6 +1350,7 @@ export function ThreadCanvas({
                     stroke={col.color}
                     strokeWidth={isHighlighted ? 3 : 2}
                     opacity={hasActiveHighlight ? (isHighlighted ? 0.9 : 0.14) : 0.3}
+                    strokeLinecap="round"
                     style={{
                       transition: 'opacity 180ms ease, stroke-width 180ms ease',
                     }}
@@ -1372,8 +1373,9 @@ export function ThreadCanvas({
                   y2={endY}
                   stroke={col.color}
                   strokeWidth="4"
-                  strokeDasharray="6,4"
+                  strokeDasharray="6,6"
                   opacity="0.4"
+                  strokeLinecap="round"
                 />
               );
             })}
@@ -1390,8 +1392,9 @@ export function ThreadCanvas({
                     x2={tagLayout.dotX}
                     y2={tagY}
                     stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
-                    strokeWidth="1.5"
+                    strokeWidth="2"
                     opacity="0.7"
+                    strokeLinecap="round"
                   />
                   <circle
                     cx={tagLayout.dotX}
@@ -1406,10 +1409,10 @@ export function ThreadCanvas({
                     width={tagLayout.width}
                     height={tagLayout.height}
                     rx={11}
-                    fill="white"
+                    fill="#fbfbf7"
                     fillOpacity="0.96"
                     stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
-                    strokeWidth="1"
+                    strokeWidth="2"
                   />
                   <text
                     x={tagLayout.textX}
@@ -1417,7 +1420,7 @@ export function ThreadCanvas({
                     textAnchor="middle"
                     fontSize="11"
                     fontWeight="600"
-                    fill="#1e293b"
+                    fill="#1d1d1b"
                   >
                     {tagLayout.label}
                   </text>
@@ -1478,15 +1481,15 @@ export function ThreadCanvas({
                   cy={y}
                   r={8}
                   fill={event.color}
-                  stroke="white"
+                  stroke="#1d1d1b"
                   strokeWidth={isHighlighted ? 2.5 : 2}
                   style={{
                     filter:
                       isHighlighted
-                        ? `drop-shadow(0px 0px 0px ${event.color}) drop-shadow(0px 4px 10px ${event.color}55)`
+                        ? `drop-shadow(2px 3px 0px rgba(29, 29, 27, 0.72)) drop-shadow(0px 0px 8px ${event.color}55)`
                         : hasActiveHighlight
-                          ? 'drop-shadow(0px 1px 2px rgba(0,0,0,0.08))'
-                          : 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))',
+                          ? 'drop-shadow(1px 2px 0 rgba(29,29,27,0.35))'
+                          : 'drop-shadow(1px 2px 0 rgba(29,29,27,0.55))',
                     opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.3) : 1,
                     transition: 'stroke-width 180ms ease, filter 180ms ease, opacity 180ms ease',
                   }}
@@ -1501,7 +1504,7 @@ export function ThreadCanvas({
                     opacity: hasActiveHighlight ? (isHighlighted ? 1 : 0.45) : 1,
                     transition: 'r 180ms ease, fill-opacity 180ms ease, opacity 180ms ease',
                   }}
-                  className={isHighlighted ? undefined : 'group-hover:fill-black group-hover:fill-opacity-5'}
+                    className={isHighlighted ? undefined : 'group-hover:fill-black group-hover:fill-opacity-5'}
                 />
 
                 <line
@@ -1521,12 +1524,12 @@ export function ThreadCanvas({
                     y={labelLayout.y}
                     width={labelLayout.width}
                     height={labelLayout.height}
-                    fill="white"
+                    fill="#fbfbf7"
                     fillOpacity="0.95"
-                    rx="6"
-                    stroke="#e2e8f0"
-                    strokeWidth="1"
-                    className="transition-all duration-200 group-hover:stroke-slate-300"
+                    rx="8"
+                    stroke="#1d1d1b"
+                    strokeWidth="2"
+                    className="transition-all duration-200"
                   />
 
                   <text
@@ -1534,7 +1537,7 @@ export function ThreadCanvas({
                     y={labelLayout.y + EVENT_LABEL_VERTICAL_PADDING}
                     fontSize="13"
                     fontWeight="600"
-                    fill="#1e293b"
+                    fill="#1d1d1b"
                     className="select-none"
                     dominantBaseline="hanging"
                   >
@@ -1558,7 +1561,7 @@ export function ThreadCanvas({
                       EVENT_LABEL_SECTION_GAP
                     }
                     fontSize="10"
-                    fill="#64748b"
+                    fill="#5d5d55"
                     className="select-none"
                     dominantBaseline="hanging"
                   >
@@ -1585,7 +1588,7 @@ export function ThreadCanvas({
                         EVENT_LABEL_SECTION_GAP
                       }
                       fontSize="11"
-                      fill="#64748b"
+                      fill="#5d5d55"
                       fontStyle="italic"
                       className="select-none"
                       dominantBaseline="hanging"
@@ -1611,9 +1614,9 @@ export function ThreadCanvas({
                 x="50%"
                 y={presentY}
                 textAnchor="middle"
-                fill="#94a3b8"
+                fill="#5d5d55"
                 fontSize="16"
-                className="pointer-events-none"
+                className="memory-forest-empty-note pointer-events-none"
               >
                 Add people and events to start building your thread memory
               </text>

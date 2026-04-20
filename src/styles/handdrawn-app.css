@@ -1,0 +1,465 @@
+.memory-forest-app {
+  --mf-ink: #1d1d1b;
+  --mf-pencil: #5d5d55;
+  --mf-paper: #fbfbf7;
+  --mf-paper-deep: #f3f4f0;
+  --mf-green: #7aa36f;
+  --mf-green-soft: #eaf2e8;
+  --mf-blue: #5a8fb8;
+  --mf-blue-soft: #edf3f8;
+  --mf-rose: #d6777d;
+  --mf-rose-soft: #f7e8e9;
+  --mf-line: rgba(29, 29, 27, 0.18);
+  --mf-shadow: rgba(29, 29, 27, 0.9);
+  --mf-font-hand: 'Comic Sans MS', 'Bradley Hand', 'Segoe Print', cursive;
+  --mf-font-label: 'Courier New', monospace;
+  color: var(--mf-ink);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(122, 163, 111, 0.2), transparent 23rem),
+    radial-gradient(circle at 86% 24%, rgba(90, 143, 184, 0.16), transparent 24rem),
+    linear-gradient(rgba(29, 29, 27, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 29, 27, 0.035) 1px, transparent 1px),
+    var(--mf-paper-deep);
+  background-size: auto, auto, 100% 2rem, 2rem 100%, auto;
+  font-family: var(--mf-font-hand);
+}
+
+.memory-forest-app * {
+  letter-spacing: 0;
+}
+
+.memory-forest-header {
+  position: relative;
+  border-bottom: 2px solid var(--mf-ink) !important;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1px),
+    var(--mf-paper) !important;
+  background-size: 100% 1.7rem !important;
+  box-shadow: 0 4px 0 rgba(29, 29, 27, 0.16) !important;
+}
+
+.memory-forest-logo-mark,
+.memory-forest-stat,
+.memory-forest-view-toggle {
+  border: 2px solid var(--mf-ink);
+  border-radius: 8px;
+  background: var(--mf-paper);
+  box-shadow: 2px 3px 0 var(--mf-ink);
+}
+
+.memory-forest-logo-mark {
+  background: var(--mf-green-soft) !important;
+  color: var(--mf-ink);
+  transform: rotate(-2deg);
+}
+
+.memory-forest-logo-mark svg,
+.memory-forest-stat svg {
+  color: var(--mf-ink) !important;
+}
+
+.memory-forest-title {
+  color: var(--mf-ink) !important;
+  font-family: var(--mf-font-hand);
+  font-size: clamp(1.65rem, 2.5vw, 2.35rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.memory-forest-subtitle,
+.memory-forest-app .text-slate-500,
+.memory-forest-app .text-slate-600,
+.memory-forest-app .text-muted-foreground,
+.memory-forest-app [data-slot='dialog-description'],
+.memory-forest-app [data-slot='alert-dialog-description'] {
+  color: var(--mf-pencil) !important;
+}
+
+.memory-forest-app .text-slate-700,
+.memory-forest-app .text-slate-800,
+.memory-forest-app .text-slate-900,
+.memory-forest-app label {
+  color: var(--mf-ink) !important;
+}
+
+.memory-forest-app label {
+  font-family: var(--mf-font-hand);
+  font-weight: 900 !important;
+}
+
+.memory-forest-app .font-mono {
+  font-family: var(--mf-font-label) !important;
+}
+
+.memory-forest-view-toggle {
+  background: var(--mf-blue-soft) !important;
+  padding: 0.25rem;
+}
+
+.memory-forest-stat {
+  background: var(--mf-paper) !important;
+  color: var(--mf-ink) !important;
+  font-family: var(--mf-font-label);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.memory-forest-workspace {
+  position: relative;
+}
+
+.memory-forest-panel,
+.memory-forest-app [data-slot='card'] {
+  position: relative;
+  gap: 0.85rem !important;
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.075) 1px, transparent 1px),
+    var(--mf-paper) !important;
+  background-size: 100% 1.65rem !important;
+  box-shadow: 4px 5px 0 var(--mf-shadow) !important;
+}
+
+.memory-forest-panel::before,
+.memory-forest-app [data-slot='card']::before {
+  position: absolute;
+  inset: 5px -4px -5px 4px;
+  z-index: -1;
+  border: 2px solid rgba(29, 29, 27, 0.34);
+  border-radius: 8px;
+  content: '';
+  pointer-events: none;
+  transform: rotate(0.35deg);
+}
+
+.memory-forest-panel:nth-child(2n),
+.memory-forest-app aside [data-slot='card']:nth-child(2n) {
+  transform: rotate(0.18deg);
+}
+
+.memory-forest-panel:nth-child(3n),
+.memory-forest-app aside [data-slot='card']:nth-child(3n) {
+  transform: rotate(-0.22deg);
+}
+
+.memory-forest-panel-heading,
+.memory-forest-app h3,
+.memory-forest-app [data-slot='dialog-title'],
+.memory-forest-app [data-slot='alert-dialog-title'],
+.memory-forest-app [data-slot='sheet-title'] {
+  color: var(--mf-ink) !important;
+  font-family: var(--mf-font-hand);
+  font-weight: 900 !important;
+}
+
+.memory-forest-help p {
+  width: fit-content;
+  max-width: 100%;
+  border-bottom: 2px solid rgba(29, 29, 27, 0.28);
+  color: var(--mf-ink);
+  line-height: 1.45;
+}
+
+.memory-forest-transfer {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  box-shadow: 2px 3px 0 var(--mf-ink);
+  font-family: var(--mf-font-label);
+  font-weight: 700;
+}
+
+.memory-forest-transfer-error {
+  background: var(--mf-rose-soft) !important;
+  color: #9f3039 !important;
+}
+
+.memory-forest-transfer-success {
+  background: var(--mf-green-soft) !important;
+  color: #416f3e !important;
+}
+
+.memory-forest-app [data-slot='button'],
+.memory-forest-app [data-slot='alert-dialog-action'],
+.memory-forest-app [data-slot='alert-dialog-cancel'],
+.memory-forest-chip-button,
+.memory-forest-zoom button {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background: var(--mf-paper) !important;
+  color: var(--mf-ink) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink);
+  font-family: var(--mf-font-hand);
+  font-weight: 900 !important;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    opacity 160ms ease !important;
+}
+
+.memory-forest-app [data-slot='button']:hover:not(:disabled),
+.memory-forest-app [data-slot='alert-dialog-action']:hover,
+.memory-forest-app [data-slot='alert-dialog-cancel']:hover,
+.memory-forest-chip-button:hover:not(:disabled),
+.memory-forest-zoom button:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(-0.35deg);
+  box-shadow: 3px 4px 0 var(--mf-ink);
+}
+
+.memory-forest-app [data-slot='button'][data-variant='default'],
+.memory-forest-app [data-slot='alert-dialog-action'],
+.memory-forest-app [data-slot='button'].memory-forest-active-tab {
+  background: var(--mf-green-soft) !important;
+}
+
+.memory-forest-app [data-slot='button'][data-variant='ghost'] {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.memory-forest-app [data-slot='button'][data-variant='ghost']:hover:not(:disabled) {
+  border-color: var(--mf-ink) !important;
+  background: var(--mf-rose-soft) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink);
+}
+
+.memory-forest-app [data-slot='button'].bg-red-600,
+.memory-forest-app [data-slot='alert-dialog-action'].bg-red-600 {
+  background: var(--mf-rose-soft) !important;
+  color: #8f252e !important;
+}
+
+.memory-forest-app [data-slot='input'],
+.memory-forest-app [data-slot='checkbox'],
+.memory-forest-form-box {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background: #fffefa !important;
+  color: var(--mf-ink) !important;
+  box-shadow: 2px 3px 0 rgba(29, 29, 27, 0.86);
+  font-family: var(--mf-font-hand);
+}
+
+.memory-forest-app [data-slot='input']:focus-visible,
+.memory-forest-app [data-slot='checkbox']:focus-visible,
+.memory-forest-chip-button:focus-visible {
+  outline: 3px solid rgba(90, 143, 184, 0.32) !important;
+  outline-offset: 2px;
+}
+
+.memory-forest-app [data-slot='checkbox'][data-state='checked'] {
+  background: var(--mf-green-soft) !important;
+  color: var(--mf-ink) !important;
+}
+
+.memory-forest-color-dot,
+.memory-forest-color-swatch {
+  border: 2px solid var(--mf-ink) !important;
+  box-shadow: 2px 2px 0 var(--mf-ink) !important;
+}
+
+.memory-forest-color-swatch {
+  border-radius: 999px;
+}
+
+.memory-forest-color-swatch:hover {
+  transform: translateY(-2px) rotate(-2deg) !important;
+}
+
+.memory-forest-person-row,
+.memory-forest-event-group,
+.memory-forest-event-row,
+.memory-forest-detail-note,
+.memory-forest-thread-note {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background: rgba(251, 251, 247, 0.92) !important;
+}
+
+.memory-forest-person-row,
+.memory-forest-event-row {
+  box-shadow: 2px 3px 0 rgba(29, 29, 27, 0.18);
+}
+
+.memory-forest-person-row:hover,
+.memory-forest-event-row:hover,
+.memory-forest-event-group-header:hover {
+  background: var(--mf-blue-soft) !important;
+}
+
+.memory-forest-event-row-selected {
+  background: var(--mf-green-soft) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink) !important;
+}
+
+.memory-forest-event-group {
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1px),
+    var(--mf-paper) !important;
+  background-size: 100% 1.5rem !important;
+}
+
+.memory-forest-event-group-header,
+.memory-forest-event-group-content {
+  border-color: rgba(29, 29, 27, 0.22) !important;
+}
+
+.memory-forest-app [data-slot='badge'] {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 999px !important;
+  background: var(--mf-paper) !important;
+  color: var(--mf-ink) !important;
+  box-shadow: 1px 2px 0 var(--mf-ink);
+  font-family: var(--mf-font-hand);
+  font-weight: 900 !important;
+}
+
+.memory-forest-app [data-slot='dialog-overlay'],
+.memory-forest-app [data-slot='alert-dialog-overlay'],
+.memory-forest-app [data-slot='sheet-overlay'] {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(251, 251, 247, 0.16), transparent 22rem),
+    rgba(29, 29, 27, 0.46) !important;
+}
+
+.memory-forest-app [data-slot='dialog-content'],
+.memory-forest-app [data-slot='alert-dialog-content'],
+.memory-forest-app [data-slot='sheet-content'] {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.075) 1px, transparent 1px),
+    var(--mf-paper) !important;
+  background-size: 100% 1.75rem !important;
+  box-shadow: 8px 10px 0 var(--mf-shadow) !important;
+  color: var(--mf-ink) !important;
+  font-family: var(--mf-font-hand);
+}
+
+.memory-forest-app [data-slot='sheet-content'] {
+  border-right: 0 !important;
+  border-radius: 8px 0 0 8px !important;
+}
+
+.memory-forest-app [data-slot='dialog-header'],
+.memory-forest-app [data-slot='sheet-header'],
+.memory-forest-app [data-slot='dialog-footer'],
+.memory-forest-app [data-slot='alert-dialog-footer'] {
+  border-color: var(--mf-ink) !important;
+}
+
+.memory-forest-app [data-slot='dialog-content'] > button,
+.memory-forest-app [data-slot='sheet-content'] > button {
+  border: 2px solid var(--mf-ink);
+  border-radius: 8px;
+  background: var(--mf-paper);
+  color: var(--mf-ink);
+  box-shadow: 2px 3px 0 var(--mf-ink);
+  opacity: 1;
+}
+
+.memory-forest-app [data-slot='separator'] {
+  background: var(--mf-ink) !important;
+  opacity: 0.32;
+}
+
+.memory-forest-thread-canvas {
+  position: relative;
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 29, 27, 0.035) 1px, transparent 1px),
+    var(--mf-paper) !important;
+  background-size: 100% 2rem, 2rem 100%, auto !important;
+  box-shadow: 6px 7px 0 var(--mf-shadow) !important;
+}
+
+.memory-forest-thread-canvas::after {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  color: rgba(29, 29, 27, 0.46);
+  content: 'time grows upward';
+  font-family: var(--mf-font-hand);
+  font-size: 0.8rem;
+  font-weight: 900;
+  pointer-events: none;
+  transform: rotate(-2deg);
+}
+
+.memory-forest-thread-header {
+  border-bottom: 2px solid var(--mf-ink) !important;
+  background:
+    linear-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1px),
+    rgba(251, 251, 247, 0.96) !important;
+  background-size: 100% 1.35rem !important;
+  box-shadow: 0 3px 0 rgba(29, 29, 27, 0.16) !important;
+}
+
+.memory-forest-person-tab {
+  border-radius: 8px !important;
+}
+
+.memory-forest-person-label {
+  border: 2px solid var(--mf-ink);
+  border-radius: 999px !important;
+  color: var(--mf-ink) !important;
+  box-shadow: 1px 2px 0 var(--mf-ink) !important;
+  font-family: var(--mf-font-hand);
+}
+
+.memory-forest-zoom {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 999px !important;
+  background: rgba(251, 251, 247, 0.96) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink) !important;
+  color: var(--mf-ink) !important;
+}
+
+.memory-forest-zoom button {
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  box-shadow: none;
+}
+
+.memory-forest-timeline text {
+  font-family: var(--mf-font-hand);
+  letter-spacing: 0;
+}
+
+.memory-forest-timeline line,
+.memory-forest-timeline path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.memory-forest-empty-note {
+  fill: var(--mf-pencil);
+  font-family: var(--mf-font-hand);
+  font-weight: 900;
+}
+
+.memory-forest-avatar {
+  border-color: var(--mf-ink) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink) !important;
+  transform: rotate(-1deg);
+}
+
+@media (max-width: 900px) {
+  .memory-forest-app {
+    background-size: auto, auto, 100% 1.75rem, 1.75rem 100%, auto;
+  }
+
+  .memory-forest-header {
+    max-height: none;
+  }
+
+  .memory-forest-thread-canvas::after {
+    display: none;
+  }
+}

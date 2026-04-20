@@ -179,7 +179,7 @@ export function EventsList({
     <>
       <div className="space-y-2">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-700">Events</h3>
+          <h3 className="memory-forest-panel-heading text-sm">Events</h3>
           {eventGroups.length > 0 && (
             <div className="flex items-center gap-2">
               <Button
@@ -221,8 +221,8 @@ export function EventsList({
                 open={isOpen}
                 onOpenChange={(open) => toggleGroup(group.id, open)}
               >
-                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70">
-                  <div className="flex items-center gap-1 rounded-xl px-2 py-1.5 hover:bg-white/70">
+                <div className="memory-forest-event-group">
+                  <div className="memory-forest-event-group-header flex items-center gap-1 px-2 py-1.5">
                     <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left">
                       <ChevronRight
                         className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
@@ -235,7 +235,7 @@ export function EventsList({
                         <Folder className="h-4 w-4 shrink-0 text-slate-600" />
                       )}
                       <div
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        className="memory-forest-color-dot h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: group.color }}
                       />
                       <div className="min-w-0 flex-1">
@@ -269,20 +269,20 @@ export function EventsList({
                     )}
                   </div>
 
-                  <CollapsibleContent className="space-y-1 border-t border-slate-200/80 px-2 py-2">
+                  <CollapsibleContent className="memory-forest-event-group-content space-y-1 border-t px-2 py-2">
                     {group.events.map((event) => {
                       const isSelected = event.id === selectedEventId;
 
                       return (
                         <div
                           key={event.id}
-                          className={`group flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors ${
-                            isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-white'
+                          className={`memory-forest-event-row group flex cursor-pointer items-start gap-2 p-2 transition-colors ${
+                            isSelected ? 'memory-forest-event-row-selected' : ''
                           }`}
                           onClick={() => onView?.(event)}
                         >
                           <div
-                            className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-full"
+                            className="memory-forest-color-dot mt-0.5 h-3 w-3 flex-shrink-0 rounded-full"
                             style={{ backgroundColor: event.color }}
                           />
                           <div className="min-w-0 flex-1">
@@ -398,7 +398,7 @@ export function EventsList({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="memory-forest-thread-note px-4 py-3 text-sm text-slate-600">
             Liberating the events keeps them, but clears their event thread assignment.
           </div>
 

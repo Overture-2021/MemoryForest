@@ -82,10 +82,10 @@ export function EventDetailsSheet({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-          <SheetHeader className="border-b border-slate-200 px-6 py-6 pr-14">
+          <SheetHeader className="border-b px-6 py-6 pr-14">
             <SheetTitle className="flex items-start gap-3 text-left text-xl leading-tight">
               <div
-                className="mt-1 h-4 w-4 shrink-0 rounded-full"
+                className="memory-forest-color-dot mt-1 h-4 w-4 shrink-0 rounded-full"
                 style={{ backgroundColor: event.color }}
               />
               <span>{event.title}</span>
@@ -94,7 +94,7 @@ export function EventDetailsSheet({
 
           <div className="space-y-6 px-6 py-6">
             {/* Timestamp */}
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="memory-forest-detail-note space-y-3 p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span>Time</span>
@@ -105,7 +105,7 @@ export function EventDetailsSheet({
             </div>
 
             {event.location && (
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="memory-forest-detail-note space-y-3 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <MapPin className="h-4 w-4 shrink-0" />
                   <span>Location</span>
@@ -115,7 +115,7 @@ export function EventDetailsSheet({
             )}
 
             {/* People involved */}
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="memory-forest-detail-note space-y-3 p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                 <Users className="h-4 w-4 shrink-0" />
                 <span>People Involved</span>
@@ -125,10 +125,10 @@ export function EventDetailsSheet({
                   <Badge
                     key={person.id}
                     variant="outline"
-                    className="gap-2 rounded-full border-slate-300 bg-white px-3 py-1 text-sm"
+                    className="gap-2 px-3 py-1 text-sm"
                   >
                     <span
-                      className="h-2.5 w-2.5 rounded-full"
+                      className="memory-forest-color-dot h-2.5 w-2.5 rounded-full"
                       style={{ backgroundColor: person.color }}
                     />
                     {person.name}
@@ -139,13 +139,13 @@ export function EventDetailsSheet({
 
             {/* Thread ID */}
             {event.threadId && (
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="memory-forest-detail-note space-y-3 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <Tag className="h-4 w-4 shrink-0" />
                   <span>Event Thread</span>
                 </div>
                 <div className="space-y-3 pl-6">
-                  <p className="inline-flex max-w-full items-center overflow-hidden rounded-lg bg-white px-3 py-1.5 font-mono text-sm text-slate-700 shadow-sm ring-1 ring-slate-200">
+                  <p className="memory-forest-thread-note inline-flex max-w-full items-center overflow-hidden px-3 py-1.5 font-mono text-sm text-slate-700">
                     {event.threadId}
                   </p>
                   <p className="text-xs text-slate-500">
@@ -169,7 +169,7 @@ export function EventDetailsSheet({
 
             {/* Interpretation */}
             {event.interpretation && (
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="memory-forest-detail-note space-y-3 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <MessageSquare className="h-4 w-4 shrink-0" />
                   <span>Interpretation</span>
@@ -181,14 +181,14 @@ export function EventDetailsSheet({
             )}
 
             {/* Color */}
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="memory-forest-detail-note space-y-3 p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                 <div className="h-4 w-4 shrink-0" />
                 <span>Event Color</span>
               </div>
               <div className="flex items-center gap-3 pl-6">
                 <div
-                  className="h-8 w-8 shrink-0 rounded-md border-2 border-slate-200"
+                  className="memory-forest-color-dot h-8 w-8 shrink-0 rounded-md border-2"
                   style={{ backgroundColor: event.color }}
                 />
                 <span className="text-xs font-mono text-slate-500">{event.color}</span>

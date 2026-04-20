@@ -23,11 +23,11 @@ export function PersonAvatar({
 }: PersonAvatarProps) {
   return (
     <Avatar
-      className={cn('border-2 bg-white shadow-sm', className)}
+      className={cn('memory-forest-avatar border-2 bg-white shadow-sm', className)}
       style={{
         borderColor: person.color,
         boxShadow: highlighted
-          ? `0 0 0 4px ${person.color}22, 0 8px 20px ${person.color}33`
+          ? `2px 3px 0 #1d1d1b, 0 0 0 4px ${person.color}22`
           : undefined,
       }}
     >

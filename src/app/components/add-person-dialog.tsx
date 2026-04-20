@@ -140,7 +140,7 @@ export function AddPersonDialog({
             </div>
             <div className="space-y-2">
               <Label>Profile Photo</Label>
-              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="memory-forest-form-box flex flex-wrap items-center gap-3 p-3">
                 <PersonAvatar
                   person={{
                     name: name.trim() || 'Person',
@@ -193,11 +193,11 @@ export function AddPersonDialog({
                     key={color}
                     type="button"
                     onClick={() => setSelectedColor(color)}
-                    className="w-10 h-10 rounded-full border-2 transition-all hover:scale-110"
+                    className="memory-forest-color-swatch h-10 w-10 border-2 transition-all hover:scale-110"
                     style={{
                       backgroundColor: color,
-                      borderColor: selectedColor === color ? '#1e293b' : 'white',
-                      boxShadow: selectedColor === color ? '0 0 0 2px white, 0 0 0 4px #1e293b' : '0 2px 4px rgba(0,0,0,0.1)'
+                      outline: selectedColor === color ? '3px solid rgba(29, 29, 27, 0.55)' : undefined,
+                      outlineOffset: selectedColor === color ? '3px' : undefined,
                     }}
                     aria-label={`Select color ${color}`}
                   />

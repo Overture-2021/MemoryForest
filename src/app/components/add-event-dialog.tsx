@@ -133,7 +133,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-6">
+        <DialogHeader className="shrink-0 border-b px-6 py-6">
           <DialogTitle>{isEditing ? 'Edit Event' : 'Add Event'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -187,7 +187,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
               {people.length === 0 ? (
                 <p className="text-sm text-slate-500">Add people first to create events</p>
               ) : (
-                <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                <div className="memory-forest-form-box max-h-40 space-y-2 overflow-y-auto p-3">
                   {people.map(person => (
                     <div key={person.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -200,7 +200,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
                         className="flex items-center gap-2 cursor-pointer flex-1"
                       >
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="memory-forest-color-dot h-3 w-3 rounded-full"
                           style={{ backgroundColor: person.color }}
                         />
                         <span className="text-sm">{person.name}</span>
@@ -219,11 +219,11 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
                     key={color}
                     type="button"
                     onClick={() => setSelectedColor(color)}
-                    className="w-10 h-10 rounded-full border-2 transition-all hover:scale-110"
+                    className="memory-forest-color-swatch h-10 w-10 border-2 transition-all hover:scale-110"
                     style={{
                       backgroundColor: color,
-                      borderColor: selectedColor === color ? '#1e293b' : 'white',
-                      boxShadow: selectedColor === color ? '0 0 0 2px white, 0 0 0 4px #1e293b' : '0 2px 4px rgba(0,0,0,0.1)'
+                      outline: selectedColor === color ? '3px solid rgba(29, 29, 27, 0.55)' : undefined,
+                      outlineOffset: selectedColor === color ? '3px' : undefined,
                     }}
                     aria-label={`Select color ${color}`}
                   />
@@ -257,7 +257,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
               />
             </div>
           </div>
-          <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-6 py-4">
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

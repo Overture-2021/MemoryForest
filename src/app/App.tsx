@@ -329,28 +329,29 @@ export default function App() {
   const usedColors = people.map((p) => p.color);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
-      <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
+    <div className="memory-forest-app flex h-screen flex-col overflow-hidden">
+      <header className="memory-forest-header shrink-0">
         <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-2">
-                <GitBranch className="h-6 w-6 text-white" />
+              <div className="memory-forest-logo-mark p-2">
+                <GitBranch className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">ThreadMemories</h1>
-                <p className="text-sm text-slate-600">
+                <h1 className="memory-forest-title">Memory Forest</h1>
+                <p className="memory-forest-subtitle text-sm">
                   Track group activities as connected event threads
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-1">
+              <div className="memory-forest-view-toggle flex items-center gap-2">
                 <Button
                   onClick={() => setActiveView('mood-board')}
                   variant={activeView === 'mood-board' ? 'default' : 'ghost'}
                   size="sm"
+                  className={activeView === 'mood-board' ? 'memory-forest-active-tab' : undefined}
                 >
                   <Palette className="h-4 w-4" />
                   Mood board
@@ -359,18 +360,19 @@ export default function App() {
                   onClick={() => setActiveView('prototype')}
                   variant={activeView === 'prototype' ? 'default' : 'ghost'}
                   size="sm"
+                  className={activeView === 'prototype' ? 'memory-forest-active-tab' : undefined}
                 >
                   <GitBranch className="h-4 w-4" />
                   Prototype
                 </Button>
               </div>
-              <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5">
-                <Users className="h-4 w-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{people.length} people</span>
+              <div className="memory-forest-stat flex items-center gap-2 px-3 py-1.5">
+                <Users className="h-4 w-4" />
+                <span className="text-sm font-medium">{people.length} people</span>
               </div>
-              <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5">
-                <Calendar className="h-4 w-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{events.length} events</span>
+              <div className="memory-forest-stat flex items-center gap-2 px-3 py-1.5">
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm font-medium">{events.length} events</span>
               </div>
             </div>
           </div>
@@ -382,11 +384,11 @@ export default function App() {
           <HanddrawnMoodBoard />
         </main>
       ) : (
-        <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+        <main className="memory-forest-workspace mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
           <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:gap-6">
             <aside className="grid min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-1 xl:content-start">
-              <Card className="p-4">
-                <h3 className="mb-3 text-sm font-semibold text-slate-700">Actions</h3>
+              <Card className="memory-forest-panel p-4">
+                <h3 className="memory-forest-panel-heading mb-3 text-sm">Actions</h3>
                 <div className="space-y-2">
                   <Button
                     onClick={() => setShowAddPerson(true)}
@@ -411,8 +413,8 @@ export default function App() {
                 )}
               </Card>
 
-              <Card className="p-4">
-                <h3 className="mb-3 text-sm font-semibold text-slate-700">People</h3>
+              <Card className="memory-forest-panel p-4">
+                <h3 className="memory-forest-panel-heading mb-3 text-sm">People</h3>
                 {people.length === 0 ? (
                   <p className="text-sm text-slate-500">No people added yet</p>
                 ) : (
@@ -420,7 +422,7 @@ export default function App() {
                 )}
               </Card>
 
-              <Card className="p-4">
+              <Card className="memory-forest-panel p-4">
                 <EventsList
                   events={events}
                   people={people}
@@ -433,10 +435,10 @@ export default function App() {
                 />
               </Card>
 
-              <Card className="p-4">
+              <Card className="memory-forest-panel p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-700">Import / Export</h3>
+                    <h3 className="memory-forest-panel-heading text-sm">Import / Export</h3>
                     <p className="mt-1 text-xs text-slate-500">
                       Import replaces the current timeline.
                     </p>
@@ -461,10 +463,10 @@ export default function App() {
                 />
                 {transferStatus && (
                   <div
-                    className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+                    className={`memory-forest-transfer mt-3 px-3 py-2 text-xs ${
                       transferStatus.type === 'error'
-                        ? 'border-red-200 bg-red-50 text-red-700'
-                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        ? 'memory-forest-transfer-error'
+                        : 'memory-forest-transfer-success'
                     }`}
                   >
                     {transferStatus.message}
@@ -472,9 +474,9 @@ export default function App() {
                 )}
               </Card>
 
-              <Card className="border-slate-200 bg-slate-50 p-4 md:col-span-2 xl:col-span-1">
-                <h3 className="mb-3 text-sm font-semibold text-slate-700">How it works</h3>
-                <div className="space-y-2 text-xs text-slate-600">
+              <Card className="memory-forest-help memory-forest-panel p-4 md:col-span-2 xl:col-span-1">
+                <h3 className="memory-forest-panel-heading mb-3 text-sm">How it works</h3>
+                <div className="space-y-2 text-xs">
                   <p>- Vertical lines = threads (people or events)</p>
                   <p>- Dots = event nodes</p>
                   <p>- Time flows bottom to top</p>

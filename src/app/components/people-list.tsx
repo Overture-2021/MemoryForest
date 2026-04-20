@@ -27,7 +27,7 @@ export function PeopleList({ people, onEdit, onDelete }: PeopleListProps) {
       {people.map(person => (
         <div 
           key={person.id} 
-          className="group flex items-center gap-3 rounded p-2 hover:bg-slate-50"
+          className="memory-forest-person-row group flex items-center gap-3 p-2"
         >
           <PersonAvatar person={person} className="size-7 flex-shrink-0" />
           <span className="text-sm flex-1">{person.name}</span>
