@@ -455,11 +455,23 @@
 }
 
 [data-slot='dialog-content'] {
-  transform: translate(-50%, -50%) rotate(-0.2deg) !important;
+  left: 50% !important;
+  top: 50% !important;
+  max-height: calc(100vh - 2rem) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow: hidden !important;
+  translate: -50% -50% !important;
+  transform: none !important;
 }
 
 [data-slot='alert-dialog-content'] {
-  transform: translate(-50%, -50%) rotate(0.25deg) !important;
+  left: 50% !important;
+  top: 50% !important;
+  max-height: calc(100vh - 2rem) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow: auto !important;
+  translate: -50% -50% !important;
+  transform: none !important;
 }
 
 [data-slot='dialog-title'],

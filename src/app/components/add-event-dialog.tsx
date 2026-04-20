@@ -132,7 +132,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogHeader className="shrink-0 border-b px-6 py-6">
           <DialogTitle>{isEditing ? 'Edit Event' : 'Add Event'}</DialogTitle>
         </DialogHeader>
