@@ -2,14 +2,14 @@
 :root {
   --mf-ink: #1d1d1b;
   --mf-pencil: #5d5d55;
-  --mf-paper: #fbfbf7;
-  --mf-paper-deep: #f3f4f0;
+  --mf-paper: #fffaf0;
+  --mf-paper-deep: #f4efe3;
   --mf-green: #7aa36f;
-  --mf-green-soft: #eaf2e8;
+  --mf-green-soft: #f8efd9;
   --mf-blue: #5a8fb8;
-  --mf-blue-soft: #edf3f8;
+  --mf-blue-soft: #f7f0e3;
   --mf-rose: #d6777d;
-  --mf-rose-soft: #f7e8e9;
+  --mf-rose-soft: #f6e5d9;
   --mf-line: rgba(29, 29, 27, 0.18);
   --mf-shadow: rgba(29, 29, 27, 0.9);
   --mf-font-hand: 'Comic Sans MS', 'Bradley Hand', 'Segoe Print', cursive;
@@ -19,8 +19,8 @@
 .memory-forest-app {
   color: var(--mf-ink);
   background:
-    radial-gradient(circle at 12% 8%, rgba(122, 163, 111, 0.2), transparent 23rem),
-    radial-gradient(circle at 86% 24%, rgba(90, 143, 184, 0.16), transparent 24rem),
+    radial-gradient(circle at 14% 10%, rgba(199, 148, 58, 0.09), transparent 24rem),
+    radial-gradient(circle at 88% 24%, rgba(166, 115, 55, 0.06), transparent 25rem),
     linear-gradient(rgba(29, 29, 27, 0.075) 1px, transparent 1px),
     linear-gradient(90deg, rgba(29, 29, 27, 0.035) 1px, transparent 1px),
     var(--mf-paper-deep);
@@ -322,7 +322,7 @@
 .memory-forest-form-box {
   border: 2px solid var(--mf-ink) !important;
   border-radius: 8px !important;
-  background: #fffefa !important;
+  background: #fffaf3 !important;
   color: var(--mf-ink) !important;
   box-shadow: 2px 3px 0 rgba(29, 29, 27, 0.86);
   font-family: var(--mf-font-hand);
@@ -372,7 +372,7 @@
 .memory-forest-thread-note {
   border: 2px solid var(--mf-ink) !important;
   border-radius: 8px !important;
-  background: rgba(251, 251, 247, 0.92) !important;
+  background: rgba(255, 250, 240, 0.92) !important;
 }
 
 .memory-forest-person-row,
@@ -433,7 +433,7 @@
 [data-slot='alert-dialog-overlay'],
 [data-slot='sheet-overlay'] {
   background:
-    radial-gradient(circle at 50% 50%, rgba(251, 251, 247, 0.16), transparent 22rem),
+    radial-gradient(circle at 50% 50%, rgba(255, 250, 240, 0.18), transparent 22rem),
     rgba(29, 29, 27, 0.46) !important;
 }
 
@@ -501,14 +501,14 @@
 
 [data-slot='dialog-header'],
 [data-slot='sheet-header'] {
-  background: rgba(251, 251, 247, 0.42);
+  background: rgba(255, 250, 240, 0.42);
 }
 
 [data-slot='dialog-footer'],
 [data-slot='alert-dialog-footer'] {
   background:
     linear-gradient(rgba(29, 29, 27, 0.055) 1px, transparent 1px),
-    rgba(251, 251, 247, 0.92) !important;
+    rgba(255, 250, 240, 0.92) !important;
   background-size: 100% 1.6rem !important;
 }
 
@@ -566,7 +566,7 @@
   border-bottom: 2px solid var(--mf-ink) !important;
   background:
     linear-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1px),
-    rgba(251, 251, 247, 0.96) !important;
+    rgba(255, 250, 240, 0.96) !important;
   background-size: 100% 1.35rem !important;
   box-shadow: 0 3px 0 rgba(29, 29, 27, 0.16) !important;
 }
@@ -586,7 +586,7 @@
 .memory-forest-zoom {
   border: 2px solid var(--mf-ink) !important;
   border-radius: 999px !important;
-  background: rgba(251, 251, 247, 0.96) !important;
+  background: rgba(255, 250, 240, 0.96) !important;
   box-shadow: 2px 3px 0 var(--mf-ink) !important;
   color: var(--mf-ink) !important;
 }
