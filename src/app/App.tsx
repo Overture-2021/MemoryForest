@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Calendar, GitBranch, Users, Download, Upload } from 'lucide-react';
+import { Plus, Calendar, GitBranch, Users, Download, Upload, Palette } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { ThreadCanvas } from './components/thread-canvas';
@@ -8,6 +8,7 @@ import { AddEventDialog } from './components/add-event-dialog';
 import { EventDetailsSheet } from './components/event-details-sheet';
 import { PeopleList } from './components/people-list';
 import { EventsList } from './components/events-list';
+import { HanddrawnMoodBoard } from './components/handdrawn-mood-board';
 import { Person, Event } from './types/thread-memories';
 import {
   createThreadMemoriesSnapshot,
@@ -27,6 +28,7 @@ interface TransferStatus {
 }
 
 type ThreadDeleteMode = 'liberate' | 'delete';
+type AppView = 'mood-board' | 'prototype';
 
 export default function App() {
   const [initialSnapshot] = useState(() => loadThreadMemoriesSnapshot());
@@ -40,6 +42,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [timelineFocusRequest, setTimelineFocusRequest] = useState<TimelineFocusRequest | null>(null);
   const [transferStatus, setTransferStatus] = useState<TransferStatus | null>(null);
+  const [activeView, setActiveView] = useState<AppView>('mood-board');
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -343,6 +346,24 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-1">
+                <Button
+                  onClick={() => setActiveView('mood-board')}
+                  variant={activeView === 'mood-board' ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Palette className="h-4 w-4" />
+                  Mood board
+                </Button>
+                <Button
+                  onClick={() => setActiveView('prototype')}
+                  variant={activeView === 'prototype' ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  Prototype
+                </Button>
+              </div>
               <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5">
                 <Users className="h-4 w-4 text-slate-600" />
                 <span className="text-sm font-medium text-slate-700">{people.length} people</span>
@@ -356,120 +377,126 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
-        <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:gap-6">
-          <aside className="grid min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-1 xl:content-start">
-            <Card className="p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">Actions</h3>
-              <div className="space-y-2">
-                <Button
-                  onClick={() => setShowAddPerson(true)}
-                  className="w-full justify-start"
-                  variant="outline"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Person
-                </Button>
-                <Button
-                  onClick={() => setShowAddEvent(true)}
-                  className="w-full justify-start"
-                  variant="outline"
-                  disabled={people.length === 0}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Event
-                </Button>
-              </div>
-              {people.length === 0 && (
-                <p className="mt-3 text-xs text-slate-500">Add people first to create events</p>
-              )}
-            </Card>
+      {activeView === 'mood-board' ? (
+        <main className="flex min-h-0 flex-1 overflow-hidden">
+          <HanddrawnMoodBoard />
+        </main>
+      ) : (
+        <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+          <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:gap-6">
+            <aside className="grid min-h-0 gap-4 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-1 xl:content-start">
+              <Card className="p-4">
+                <h3 className="mb-3 text-sm font-semibold text-slate-700">Actions</h3>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => setShowAddPerson(true)}
+                    className="w-full justify-start"
+                    variant="outline"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Person
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddEvent(true)}
+                    className="w-full justify-start"
+                    variant="outline"
+                    disabled={people.length === 0}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Event
+                  </Button>
+                </div>
+                {people.length === 0 && (
+                  <p className="mt-3 text-xs text-slate-500">Add people first to create events</p>
+                )}
+              </Card>
 
-            <Card className="p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">People</h3>
-              {people.length === 0 ? (
-                <p className="text-sm text-slate-500">No people added yet</p>
-              ) : (
-                <PeopleList people={people} onEdit={setEditingPerson} onDelete={deletePerson} />
-              )}
-            </Card>
+              <Card className="p-4">
+                <h3 className="mb-3 text-sm font-semibold text-slate-700">People</h3>
+                {people.length === 0 ? (
+                  <p className="text-sm text-slate-500">No people added yet</p>
+                ) : (
+                  <PeopleList people={people} onEdit={setEditingPerson} onDelete={deletePerson} />
+                )}
+              </Card>
 
-            <Card className="p-4">
-              <EventsList
-                events={events}
+              <Card className="p-4">
+                <EventsList
+                  events={events}
+                  people={people}
+                  onEdit={setEditingEvent}
+                  onDelete={deleteEvent}
+                  onDeleteThread={deleteEventThread}
+                  onView={handleEventClick}
+                  onFocusTimeline={handleFocusEventOnTimeline}
+                  selectedEventId={selectedEvent?.id ?? null}
+                />
+              </Card>
+
+              <Card className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700">Import / Export</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Import replaces the current timeline.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button onClick={handleImportClick} variant="outline" className="w-full">
+                    <Upload className="h-4 w-4" />
+                    Import JSON
+                  </Button>
+                  <Button onClick={handleExportClick} variant="outline" className="w-full">
+                    <Download className="h-4 w-4" />
+                    Export JSON
+                  </Button>
+                </div>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={handleImportFileChange}
+                />
+                {transferStatus && (
+                  <div
+                    className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+                      transferStatus.type === 'error'
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    }`}
+                  >
+                    {transferStatus.message}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="border-slate-200 bg-slate-50 p-4 md:col-span-2 xl:col-span-1">
+                <h3 className="mb-3 text-sm font-semibold text-slate-700">How it works</h3>
+                <div className="space-y-2 text-xs text-slate-600">
+                  <p>- Vertical lines = threads (people or events)</p>
+                  <p>- Dots = event nodes</p>
+                  <p>- Time flows bottom to top</p>
+                  <p>- Scroll the canvas to move through time</p>
+                  <p>- Use +/- or Ctrl/Cmd + wheel to zoom vertically</p>
+                  <p>- Lines connect threads to shared events</p>
+                  <p>- Click events to view details</p>
+                </div>
+              </Card>
+            </aside>
+
+            <div className="min-h-[420px] min-w-0 xl:h-full xl:min-h-0">
+              <ThreadCanvas
                 people={people}
-                onEdit={setEditingEvent}
-                onDelete={deleteEvent}
-                onDeleteThread={deleteEventThread}
-                onView={handleEventClick}
-                onFocusTimeline={handleFocusEventOnTimeline}
-                selectedEventId={selectedEvent?.id ?? null}
+                events={events}
+                onEventClick={handleEventClick}
+                focusRequest={timelineFocusRequest}
               />
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Import / Export</h3>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Import replaces the current timeline.
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button onClick={handleImportClick} variant="outline" className="w-full">
-                  <Upload className="h-4 w-4" />
-                  Import JSON
-                </Button>
-                <Button onClick={handleExportClick} variant="outline" className="w-full">
-                  <Download className="h-4 w-4" />
-                  Export JSON
-                </Button>
-              </div>
-              <input
-                ref={importInputRef}
-                type="file"
-                accept="application/json,.json"
-                className="hidden"
-                onChange={handleImportFileChange}
-              />
-              {transferStatus && (
-                <div
-                  className={`mt-3 rounded-md border px-3 py-2 text-xs ${
-                    transferStatus.type === 'error'
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  }`}
-                >
-                  {transferStatus.message}
-                </div>
-              )}
-            </Card>
-
-            <Card className="border-slate-200 bg-slate-50 p-4 md:col-span-2 xl:col-span-1">
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">How it works</h3>
-              <div className="space-y-2 text-xs text-slate-600">
-                <p>- Vertical lines = threads (people or events)</p>
-                <p>- Dots = event nodes</p>
-                <p>- Time flows bottom to top</p>
-                <p>- Scroll the canvas to move through time</p>
-                <p>- Use +/- or Ctrl/Cmd + wheel to zoom vertically</p>
-                <p>- Lines connect threads to shared events</p>
-                <p>- Click events to view details</p>
-              </div>
-            </Card>
-          </aside>
-
-          <div className="min-h-[420px] min-w-0 xl:h-full xl:min-h-0">
-            <ThreadCanvas
-              people={people}
-              events={events}
-              onEventClick={handleEventClick}
-              focusRequest={timelineFocusRequest}
-            />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      )}
 
       <AddPersonDialog
         open={showAddPerson || !!editingPerson}
