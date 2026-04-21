@@ -791,6 +791,8 @@ export function ThreadCanvas({
     totalHeight,
     getY,
     gridLines,
+    showVisibleYearIndicator,
+    visibleYearLabel,
     eventThreadRanges,
     presentY,
     scrollRangeEnd,
@@ -840,13 +842,21 @@ export function ThreadCanvas({
     const scrollRangeEnd = clamp(earliestRelevantY - viewportHeight / 2, 0, maxScrollTop);
 
     const rawGridLines: GridLine[] = [];
-    const visibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
-    const visibleBottom = Math.min(
+    const viewportVisibleTop = clamp(viewportMetrics.scrollTop, 0, totalHeight);
+    const viewportVisibleBottom = clamp(
+      viewportMetrics.scrollTop + viewportHeight,
+      viewportVisibleTop,
+      totalHeight,
+    );
+    const viewportVisibleMaxMs = paddedMaxMs - viewportVisibleTop / scaledTimeScale;
+    const viewportVisibleMinMs = paddedMaxMs - viewportVisibleBottom / scaledTimeScale;
+    const renderVisibleTop = Math.max(0, viewportMetrics.scrollTop - GRID_RENDER_BUFFER);
+    const renderVisibleBottom = Math.min(
       totalHeight,
       viewportMetrics.scrollTop + viewportHeight + GRID_RENDER_BUFFER,
     );
-    const visibleMaxMs = paddedMaxMs - visibleTop / scaledTimeScale;
-    const visibleMinMs = paddedMaxMs - visibleBottom / scaledTimeScale;
+    const renderVisibleMaxMs = paddedMaxMs - renderVisibleTop / scaledTimeScale;
+    const renderVisibleMinMs = paddedMaxMs - renderVisibleBottom / scaledTimeScale;
     const pixelsPerYear = scaledTimeScale * approximateMsPerYear;
     const pixelsPerMonth = scaledTimeScale * approximateMsPerMonth;
     const pixelsPerDay = scaledTimeScale * msPerDay;
@@ -857,7 +867,7 @@ export function ThreadCanvas({
     const showDays = pixelsPerDay >= 12;
     const hourStep = getHourStep(pixelsPerHour);
 
-    const yearStart = getStartOfYear(new Date(visibleMinMs));
+    const yearStart = getStartOfYear(new Date(renderVisibleMinMs));
     const yearOffset = yearStart.getFullYear() % yearStep;
     if (yearOffset !== 0) {
       yearStart.setFullYear(yearStart.getFullYear() + (yearStep - yearOffset));
@@ -865,7 +875,7 @@ export function ThreadCanvas({
 
     for (
       let current = new Date(yearStart);
-      current.getTime() <= visibleMaxMs;
+      current.getTime() <= renderVisibleMaxMs;
       current.setFullYear(current.getFullYear() + yearStep)
     ) {
       if (current.getTime() >= paddedMinMs) {
@@ -878,10 +888,10 @@ export function ThreadCanvas({
     }
 
     if (showMonths) {
-      const start = getStartOfMonth(new Date(visibleMinMs));
+      const start = getStartOfMonth(new Date(renderVisibleMinMs));
       for (
         let current = new Date(start);
-        current.getTime() <= visibleMaxMs;
+        current.getTime() <= renderVisibleMaxMs;
         current.setMonth(current.getMonth() + 1)
       ) {
         if (current.getTime() >= paddedMinMs) {
@@ -895,10 +905,10 @@ export function ThreadCanvas({
     }
 
     if (showDays) {
-      const start = getStartOfDay(new Date(visibleMinMs));
+      const start = getStartOfDay(new Date(renderVisibleMinMs));
       for (
         let current = new Date(start);
-        current.getTime() <= visibleMaxMs;
+        current.getTime() <= renderVisibleMaxMs;
         current.setDate(current.getDate() + 1)
       ) {
         if (current.getTime() >= paddedMinMs) {
@@ -912,7 +922,7 @@ export function ThreadCanvas({
     }
 
     if (hourStep) {
-      const start = getStartOfHour(new Date(visibleMinMs));
+      const start = getStartOfHour(new Date(renderVisibleMinMs));
       const remainder = start.getHours() % hourStep;
       if (remainder !== 0) {
         start.setHours(start.getHours() + (hourStep - remainder));
@@ -920,7 +930,7 @@ export function ThreadCanvas({
 
       for (
         let current = new Date(start);
-        current.getTime() <= visibleMaxMs;
+        current.getTime() <= renderVisibleMaxMs;
         current.setHours(current.getHours() + hourStep)
       ) {
         if (current.getTime() >= paddedMinMs) {
@@ -934,6 +944,13 @@ export function ThreadCanvas({
     }
 
     const gridLines = mergeGridLines(rawGridLines);
+    const showVisibleYearIndicator = !gridLines.some(
+      (line) =>
+        line.level === 'year' &&
+        line.time >= viewportVisibleMinMs &&
+        line.time <= viewportVisibleMaxMs,
+    );
+    const visibleYearLabel = new Date(viewportVisibleMaxMs).getFullYear().toString();
     const positions = new Map<string, number>();
     const eventThreads = Array.from(
       new Set(events.map((event) => event.threadId).filter(Boolean) as string[]),
@@ -1143,10 +1160,12 @@ export function ThreadCanvas({
       presentY,
       scrollRangeEnd,
       scrollRangeStart,
+      showVisibleYearIndicator,
       sideMargin,
       svgWidth,
       threadPositions: positions,
       totalHeight,
+      visibleYearLabel,
     };
   }, [canvasWidth, people, events, presentAnchorTime, verticalZoom, viewportMetrics]);
 
@@ -1258,6 +1277,15 @@ export function ThreadCanvas({
         ref={viewportRef}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       >
+        {showVisibleYearIndicator ? (
+          <div
+            className="pointer-events-none sticky top-2 z-20 mt-2 flex h-0 w-fit select-none"
+            style={{ marginLeft: Math.max(8, sideMargin - 56) }}
+          >
+            <div className="memory-forest-year-indicator">{visibleYearLabel}</div>
+          </div>
+        ) : null}
+
         <div className="sticky top-5 z-20 ml-auto mr-3 mt-4 flex h-0 w-fit justify-end">
           <div className="memory-forest-zoom flex items-center gap-1 text-xs font-medium">
             <button
