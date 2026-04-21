@@ -1258,8 +1258,8 @@ export function ThreadCanvas({
         ref={viewportRef}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       >
-        <div className="sticky top-3 z-20 ml-auto mr-3 mt-3 flex h-0 w-fit justify-end">
-          <div className="memory-forest-zoom flex items-center gap-1 px-2 py-1 text-xs font-medium">
+        <div className="sticky top-5 z-20 ml-auto mr-3 mt-4 flex h-0 w-fit justify-end">
+          <div className="memory-forest-zoom flex items-center gap-1 text-xs font-medium">
             <button
               type="button"
               onClick={() => setAnchoredVerticalZoom(verticalZoom / ZOOM_STEP)}

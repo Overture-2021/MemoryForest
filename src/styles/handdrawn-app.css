@@ -584,10 +584,11 @@
 }
 
 .memory-forest-zoom {
-  border: 2px solid var(--mf-ink) !important;
-  border-radius: 999px !important;
-  background: rgba(255, 250, 240, 0.96) !important;
-  box-shadow: 2px 3px 0 var(--mf-ink) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   color: var(--mf-ink) !important;
 }
 
