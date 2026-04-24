@@ -302,6 +302,26 @@
   box-shadow: 2px 3px 0 var(--mf-ink);
 }
 
+.memory-forest-sheet-action {
+  border: 2px solid var(--mf-ink) !important;
+  border-radius: 8px !important;
+  background: var(--mf-paper) !important;
+  color: var(--mf-ink) !important;
+  box-shadow: 2px 3px 0 var(--mf-ink) !important;
+  font-family: var(--mf-font-hand);
+  font-weight: 900 !important;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    opacity 160ms ease !important;
+}
+
+.memory-forest-sheet-action:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(-0.35deg);
+  box-shadow: 3px 4px 0 var(--mf-ink) !important;
+}
+
 .memory-forest-app [data-slot='button'].bg-red-600,
 .memory-forest-app [data-slot='alert-dialog-action'].bg-red-600,
 [data-slot='alert-dialog-action'].bg-red-600,

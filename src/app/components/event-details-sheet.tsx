@@ -201,7 +201,7 @@ export function EventDetailsSheet({
             <div className="space-y-3">
               <Button
                 onClick={() => onEdit?.(event)}
-                className="h-11 w-full justify-start px-4"
+                className="memory-forest-sheet-action h-11 w-full justify-start px-4"
                 variant="outline"
               >
                 <Pencil className="mr-2 h-4 w-4 shrink-0" />
@@ -210,7 +210,10 @@ export function EventDetailsSheet({
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button className="h-11 w-full justify-start px-4" variant="outline">
+                  <Button
+                    className="memory-forest-sheet-action h-11 w-full justify-start px-4"
+                    variant="outline"
+                  >
                     <Trash2 className="mr-2 h-4 w-4 shrink-0" />
                     Delete Event
                   </Button>
