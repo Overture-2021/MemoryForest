@@ -792,7 +792,9 @@ export function ThreadCanvas({
     getY,
     gridLines,
     showVisibleYearIndicator,
+    showVisibleMonthIndicator,
     visibleYearLabel,
+    visibleMonthLabel,
     eventThreadRanges,
     presentY,
     scrollRangeEnd,
@@ -944,13 +946,21 @@ export function ThreadCanvas({
     }
 
     const gridLines = mergeGridLines(rawGridLines);
+    const topVisibleDate = new Date(viewportVisibleMaxMs);
     const showVisibleYearIndicator = !gridLines.some(
       (line) =>
         line.level === 'year' &&
         line.time >= viewportVisibleMinMs &&
         line.time <= viewportVisibleMaxMs,
     );
-    const visibleYearLabel = new Date(viewportVisibleMaxMs).getFullYear().toString();
+    const showVisibleMonthIndicator = !rawGridLines.some(
+      (line) =>
+        line.level === 'month' &&
+        line.time >= viewportVisibleMinMs &&
+        line.time <= viewportVisibleMaxMs,
+    );
+    const visibleYearLabel = topVisibleDate.getFullYear().toString();
+    const visibleMonthLabel = formatGridLabelPart('month', topVisibleDate);
     const positions = new Map<string, number>();
     const eventThreads = Array.from(
       new Set(events.map((event) => event.threadId).filter(Boolean) as string[]),
@@ -1160,11 +1170,13 @@ export function ThreadCanvas({
       presentY,
       scrollRangeEnd,
       scrollRangeStart,
+      showVisibleMonthIndicator,
       showVisibleYearIndicator,
       sideMargin,
       svgWidth,
       threadPositions: positions,
       totalHeight,
+      visibleMonthLabel,
       visibleYearLabel,
     };
   }, [canvasWidth, people, events, presentAnchorTime, verticalZoom, viewportMetrics]);
@@ -1277,12 +1289,17 @@ export function ThreadCanvas({
         ref={viewportRef}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       >
-        {showVisibleYearIndicator ? (
+        {showVisibleYearIndicator || showVisibleMonthIndicator ? (
           <div
             className="pointer-events-none sticky top-2 z-20 mt-2 flex h-0 w-fit select-none"
             style={{ marginLeft: Math.max(8, sideMargin - 56) }}
           >
-            <div className="memory-forest-year-indicator">{visibleYearLabel}</div>
+            <div className="flex flex-col items-start gap-0.5">
+              <div className="memory-forest-year-indicator">{visibleYearLabel}</div>
+              {showVisibleMonthIndicator ? (
+                <div className="memory-forest-month-indicator">{visibleMonthLabel}</div>
+              ) : null}
+            </div>
           </div>
         ) : null}
 

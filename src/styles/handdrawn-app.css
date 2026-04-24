@@ -585,6 +585,20 @@
     2px 2px 0 rgba(29, 29, 27, 0.08);
 }
 
+.memory-forest-month-indicator {
+  color: rgba(29, 29, 27, 0.72) !important;
+  font-family: var(--mf-font-hand);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow:
+    1px 0 0 rgba(255, 250, 240, 0.98),
+    -1px 0 0 rgba(255, 250, 240, 0.98),
+    0 1px 0 rgba(255, 250, 240, 0.98),
+    0 -1px 0 rgba(255, 250, 240, 0.98);
+}
+
 .memory-forest-person-tab {
   border-radius: 8px !important;
 }
