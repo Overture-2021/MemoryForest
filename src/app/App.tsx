@@ -414,15 +414,6 @@ export default function App() {
               </Card>
 
               <Card className="memory-forest-panel p-4">
-                <h3 className="memory-forest-panel-heading mb-3 text-sm">People</h3>
-                {people.length === 0 ? (
-                  <p className="text-sm text-slate-500">No people added yet</p>
-                ) : (
-                  <PeopleList people={people} onEdit={setEditingPerson} onDelete={deletePerson} />
-                )}
-              </Card>
-
-              <Card className="memory-forest-panel p-4">
                 <EventsList
                   events={events}
                   people={people}
@@ -433,6 +424,15 @@ export default function App() {
                   onFocusTimeline={handleFocusEventOnTimeline}
                   selectedEventId={selectedEvent?.id ?? null}
                 />
+              </Card>
+
+              <Card className="memory-forest-panel p-4">
+                <h3 className="memory-forest-panel-heading mb-3 text-sm">People</h3>
+                {people.length === 0 ? (
+                  <p className="text-sm text-slate-500">No people added yet</p>
+                ) : (
+                  <PeopleList people={people} onEdit={setEditingPerson} onDelete={deletePerson} />
+                )}
               </Card>
 
               <Card className="memory-forest-panel p-4">
