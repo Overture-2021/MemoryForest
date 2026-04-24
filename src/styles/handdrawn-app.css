@@ -43,8 +43,7 @@
 }
 
 .memory-forest-logo-mark,
-.memory-forest-stat,
-.memory-forest-view-toggle {
+.memory-forest-stat {
   border: 2px solid var(--mf-ink);
   border-radius: 8px;
   background: var(--mf-paper);
@@ -148,11 +147,6 @@
 [data-slot='sheet-content'] .text-slate-800,
 [data-slot='sheet-content'] .text-slate-900 {
   color: var(--mf-ink) !important;
-}
-
-.memory-forest-view-toggle {
-  background: var(--mf-blue-soft) !important;
-  padding: 0.25rem;
 }
 
 .memory-forest-stat {
@@ -278,15 +272,10 @@
 
 .memory-forest-app [data-slot='button'][data-variant='default'],
 .memory-forest-app [data-slot='alert-dialog-action'],
-.memory-forest-app [data-slot='button'].memory-forest-active-tab,
 [data-slot='dialog-content'] [data-slot='button'][data-variant='default'],
 [data-slot='alert-dialog-content'] [data-slot='button'][data-variant='default'],
 [data-slot='sheet-content'] [data-slot='button'][data-variant='default'],
 [data-slot='alert-dialog-action'] {
-  background: var(--mf-green-soft) !important;
-}
-
-.memory-forest-app [data-slot='button'].memory-forest-active-tab {
   background: var(--mf-green-soft) !important;
 }
 
