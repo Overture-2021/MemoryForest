@@ -26,7 +26,7 @@ interface TransferStatus {
   message: string;
 }
 
-type ThreadDeleteMode = 'liberate' | 'delete';
+type LocationDeleteMode = 'liberate' | 'delete';
 
 export default function App() {
   const [initialSnapshot] = useState(() => loadThreadMemoriesSnapshot());
@@ -89,7 +89,6 @@ export default function App() {
     color: string,
     timestamp: number,
     interpretation?: string,
-    threadId?: string,
     location?: string,
   ) => {
     const newEvent: Event = {
@@ -100,7 +99,6 @@ export default function App() {
       color,
       location,
       interpretation,
-      threadId,
     };
     setEvents([...events, newEvent]);
   };
@@ -112,7 +110,6 @@ export default function App() {
     color: string,
     timestamp: number,
     interpretation?: string,
-    threadId?: string,
     location?: string,
   ) => {
     setEvents(
@@ -126,7 +123,6 @@ export default function App() {
               timestamp,
               location,
               interpretation,
-              threadId,
             }
           : e,
       ),
@@ -142,76 +138,76 @@ export default function App() {
     setShowEventDetails(false);
   };
 
-  const renameThreadId = (currentThreadId: string, nextThreadId: string) => {
-    const normalizedCurrentThreadId = currentThreadId.trim();
-    const normalizedNextThreadId = nextThreadId.trim();
+  const renameLocation = (currentLocation: string, nextLocation: string) => {
+    const normalizedCurrentLocation = currentLocation.trim();
+    const normalizedNextLocation = nextLocation.trim();
 
     if (
-      normalizedCurrentThreadId.length === 0 ||
-      normalizedNextThreadId.length === 0 ||
-      normalizedCurrentThreadId === normalizedNextThreadId
+      normalizedCurrentLocation.length === 0 ||
+      normalizedNextLocation.length === 0 ||
+      normalizedCurrentLocation === normalizedNextLocation
     ) {
       return;
     }
 
     setEvents((currentEvents) =>
       currentEvents.map((event) =>
-        event.threadId === normalizedCurrentThreadId
+        event.location === normalizedCurrentLocation
           ? {
               ...event,
-              threadId: normalizedNextThreadId,
+              location: normalizedNextLocation,
             }
           : event,
       ),
     );
     setSelectedEvent((currentEvent) =>
-      currentEvent?.threadId === normalizedCurrentThreadId
+      currentEvent?.location === normalizedCurrentLocation
         ? {
             ...currentEvent,
-            threadId: normalizedNextThreadId,
+            location: normalizedNextLocation,
           }
         : currentEvent,
     );
     setEditingEvent((currentEvent) =>
-      currentEvent?.threadId === normalizedCurrentThreadId
+      currentEvent?.location === normalizedCurrentLocation
         ? {
             ...currentEvent,
-            threadId: normalizedNextThreadId,
+            location: normalizedNextLocation,
           }
         : currentEvent,
     );
   };
 
-  const deleteEventThread = (threadId: string, mode: ThreadDeleteMode) => {
-    const normalizedThreadId = threadId.trim();
+  const deleteLocation = (location: string, mode: LocationDeleteMode) => {
+    const normalizedLocation = location.trim();
 
-    if (!normalizedThreadId) {
+    if (!normalizedLocation) {
       return;
     }
 
-    const selectedEventInThread = selectedEvent?.threadId === normalizedThreadId;
+    const selectedEventInLocation = selectedEvent?.location === normalizedLocation;
 
     setEvents((currentEvents) => {
       if (mode === 'delete') {
-        return currentEvents.filter((event) => event.threadId !== normalizedThreadId);
+        return currentEvents.filter((event) => event.location !== normalizedLocation);
       }
 
       return currentEvents.map((event) =>
-        event.threadId === normalizedThreadId
+        event.location === normalizedLocation
           ? {
               ...event,
-              threadId: undefined,
+              location: undefined,
             }
           : event,
       );
     });
 
-    if (mode === 'delete' && selectedEventInThread) {
+    if (mode === 'delete' && selectedEventInLocation) {
       setShowEventDetails(false);
     }
 
     setSelectedEvent((currentEvent) => {
-      if (currentEvent?.threadId !== normalizedThreadId) {
+      if (currentEvent?.location !== normalizedLocation) {
         return currentEvent;
       }
 
@@ -221,12 +217,12 @@ export default function App() {
 
       return {
         ...currentEvent,
-        threadId: undefined,
+        location: undefined,
       };
     });
 
     setEditingEvent((currentEvent) => {
-      if (currentEvent?.threadId !== normalizedThreadId) {
+      if (currentEvent?.location !== normalizedLocation) {
         return currentEvent;
       }
 
@@ -236,7 +232,7 @@ export default function App() {
 
       return {
         ...currentEvent,
-        threadId: undefined,
+        location: undefined,
       };
     });
   };
@@ -337,7 +333,7 @@ export default function App() {
               <div>
                 <h1 className="memory-forest-title">Memory Forest</h1>
                 <p className="memory-forest-subtitle text-sm">
-                  Track group activities as connected event threads
+                  Track group activities as connected timeline threads
                 </p>
               </div>
             </div>
@@ -391,7 +387,7 @@ export default function App() {
                 people={people}
                 onEdit={setEditingEvent}
                 onDelete={deleteEvent}
-                onDeleteThread={deleteEventThread}
+                onDeleteLocation={deleteLocation}
                 onView={handleEventClick}
                 onFocusTimeline={handleFocusEventOnTimeline}
                 selectedEventId={selectedEvent?.id ?? null}
@@ -449,7 +445,7 @@ export default function App() {
             <Card className="memory-forest-help memory-forest-panel p-4 md:col-span-2 xl:col-span-1">
               <h3 className="memory-forest-panel-heading mb-3 text-sm">How it works</h3>
               <div className="space-y-2 text-xs">
-                <p>- Vertical lines = threads (people or events)</p>
+                <p>- Vertical lines = threads (people or locations)</p>
                 <p>- Dots = event nodes</p>
                 <p>- Time flows bottom to top</p>
                 <p>- Scroll the canvas to move through time</p>
@@ -503,7 +499,7 @@ export default function App() {
         people={people}
         onEdit={handleEditEvent}
         onDelete={deleteEvent}
-        onRenameThread={renameThreadId}
+        onRenameLocation={renameLocation}
       />
     </div>
   );

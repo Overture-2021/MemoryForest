@@ -37,7 +37,7 @@ const EVENT_LABEL_SECTION_GAP = 6;
 const EVENT_TAG_HEIGHT = 22;
 const EVENT_TAG_GAP = 8;
 const EVENT_TAG_VIEWPORT_PADDING = 14;
-const EVENT_TAG_THREAD_OFFSET = 18;
+const EVENT_TAG_LOCATION_OFFSET = 18;
 const GRID_RENDER_BUFFER = 240;
 const EVENT_FOCUS_ZOOM_PERCENT = 1281;
 const EVENT_FOCUS_ZOOM = (INITIAL_VERTICAL_ZOOM * EVENT_FOCUS_ZOOM_PERCENT) / 100;
@@ -63,7 +63,7 @@ interface EventLabelLayout {
   y: number;
 }
 
-interface EventThreadTagLayout {
+interface LocationTagLayout {
   dotX: number;
   height: number;
   id: string;
@@ -405,7 +405,7 @@ function getEventLabelLayout(
   };
 }
 
-function getThreadTagLayout(id: string, x: number, y: number, svgWidth: number, name: string) {
+function getLocationTagLayout(id: string, x: number, y: number, svgWidth: number, name: string) {
   const maxWidth = Math.max(90, Math.min(180, svgWidth - 24));
   const minWidth = Math.min(88, maxWidth);
   const maxChars = Math.max(10, Math.floor((maxWidth - 28) / 6.7));
@@ -785,9 +785,9 @@ export function ThreadCanvas({
     eventNodes,
     allColumns,
     personColumns,
-    eventThreadColumns,
-    eventThreadColorById,
-    eventThreadTags,
+    locationColumns,
+    locationColorById,
+    locationTags,
     totalHeight,
     getY,
     gridLines,
@@ -795,7 +795,7 @@ export function ThreadCanvas({
     showVisibleMonthIndicator,
     visibleYearLabel,
     visibleMonthLabel,
-    eventThreadRanges,
+    locationRanges,
     presentY,
     scrollRangeEnd,
     scrollRangeStart,
@@ -962,13 +962,13 @@ export function ThreadCanvas({
     const visibleYearLabel = topVisibleDate.getFullYear().toString();
     const visibleMonthLabel = formatGridLabelPart('month', topVisibleDate);
     const positions = new Map<string, number>();
-    const eventThreads = Array.from(
-      new Set(events.map((event) => event.threadId).filter(Boolean) as string[]),
+    const locations = Array.from(
+      new Set(events.map((event) => event.location?.trim()).filter(Boolean) as string[]),
     );
-    const threadEventsById = new Map(
-      eventThreads.map((threadId) => [
-        threadId,
-        events.filter((event) => event.threadId === threadId),
+    const eventsByLocation = new Map(
+      locations.map((location) => [
+        location,
+        events.filter((event) => event.location?.trim() === location),
       ]),
     );
     const personColumns = people.map((person) => ({
@@ -978,17 +978,17 @@ export function ThreadCanvas({
       photo: person.photo,
       type: 'person' as const,
     }));
-    const eventThreadColumns = eventThreads.map((threadId) => {
-      const threadEvents = threadEventsById.get(threadId) ?? [];
+    const locationColumns = locations.map((location) => {
+      const locationEvents = eventsByLocation.get(location) ?? [];
       return {
-        color: threadEvents[0]?.color || '#64748b',
-        id: threadId,
-        name: threadId,
-        type: 'eventThread' as const,
+        color: locationEvents[0]?.color || '#64748b',
+        id: location,
+        name: location,
+        type: 'location' as const,
       };
     });
-    const columns = [...personColumns, ...eventThreadColumns];
-    const eventThreadColorById = new Map(eventThreadColumns.map((col) => [col.id, col.color]));
+    const columns = [...personColumns, ...locationColumns];
+    const locationColorById = new Map(locationColumns.map((col) => [col.id, col.color]));
 
     const availableWidth = Math.max(svgWidth - threadStartX - rightMargin, 160);
     const minThreadX = threadStartX;
@@ -1010,10 +1010,10 @@ export function ThreadCanvas({
         ? clamp((availableWidth / (columns.length - 1)) * 0.45, 18, 52)
         : 24;
 
-    const resolvedEventThreadPositions = eventThreadColumns
+    const resolvedLocationPositions = locationColumns
       .map((col) => {
-        const threadEvents = threadEventsById.get(col.id) ?? [];
-        const linkedPersonPositions = threadEvents.flatMap((event) =>
+        const locationEvents = eventsByLocation.get(col.id) ?? [];
+        const linkedPersonPositions = locationEvents.flatMap((event) =>
           event.personIds
             .map((personId) => positions.get(personId))
             .filter((position): position is number => position !== undefined),
@@ -1035,7 +1035,7 @@ export function ThreadCanvas({
       .sort((left, right) => left.targetX - right.targetX || left.id.localeCompare(right.id));
     const occupiedThreadPositions = [...personThreadPositions];
 
-    resolvedEventThreadPositions.forEach(({ id, targetX }) => {
+    resolvedLocationPositions.forEach(({ id, targetX }) => {
       const resolvedX = getClosestAvailableThreadX(
         targetX,
         occupiedThreadPositions,
@@ -1047,13 +1047,13 @@ export function ThreadCanvas({
       occupiedThreadPositions.push(resolvedX);
     });
 
-    const eventThreadRanges = new Map<string, { minY: number; maxY: number }>();
-    eventThreads.forEach((tid) => {
-      const threadEvents = threadEventsById.get(tid) ?? [];
-      if (threadEvents.length > 0) {
-        const earliestTimestamp = Math.min(...threadEvents.map((e) => e.timestamp));
-        const latestTimestamp = Math.max(...threadEvents.map((e) => e.timestamp));
-        eventThreadRanges.set(tid, {
+    const locationRanges = new Map<string, { minY: number; maxY: number }>();
+    locations.forEach((location) => {
+      const locationEvents = eventsByLocation.get(location) ?? [];
+      if (locationEvents.length > 0) {
+        const earliestTimestamp = Math.min(...locationEvents.map((e) => e.timestamp));
+        const latestTimestamp = Math.max(...locationEvents.map((e) => e.timestamp));
+        locationRanges.set(location, {
           maxY: getY(earliestTimestamp),
           minY: getY(latestTimestamp),
         });
@@ -1062,10 +1062,11 @@ export function ThreadCanvas({
 
     const eventNodes = events.map((event) => {
       const y = getY(event.timestamp);
+      const eventLocation = event.location?.trim();
 
       let x: number;
-      if (event.threadId && positions.has(event.threadId)) {
-        x = positions.get(event.threadId)!;
+      if (eventLocation && positions.has(eventLocation)) {
+        x = positions.get(eventLocation)!;
       } else {
         const personPositions = event.personIds
           .map((pid) => positions.get(pid))
@@ -1127,31 +1128,31 @@ export function ThreadCanvas({
       visibleTagMinY,
       totalHeight,
     );
-    const eventThreadTags = resolveVerticalCollisions(
-      eventThreadColumns
+    const locationTags = resolveVerticalCollisions(
+      locationColumns
         .map((col) => {
           const x = positions.get(col.id);
-          const range = eventThreadRanges.get(col.id);
+          const range = locationRanges.get(col.id);
           if (x === undefined || !range) return null;
 
-          const threadVisibleTop = Math.max(range.minY, viewportMetrics.scrollTop);
-          const threadVisibleBottom = Math.min(
+          const locationVisibleTop = Math.max(range.minY, viewportMetrics.scrollTop);
+          const locationVisibleBottom = Math.min(
             range.maxY,
             viewportMetrics.scrollTop + viewportHeight,
           );
-          if (threadVisibleTop > threadVisibleBottom) {
+          if (locationVisibleTop > locationVisibleBottom) {
             return null;
           }
 
           const preferredCenterY = clamp(
-            range.minY + EVENT_TAG_THREAD_OFFSET,
+            range.minY + EVENT_TAG_LOCATION_OFFSET,
             visibleTagMinY + EVENT_TAG_HEIGHT / 2,
             Math.max(visibleTagMinY + EVENT_TAG_HEIGHT / 2, visibleTagMaxY - EVENT_TAG_HEIGHT / 2),
           );
 
-          return getThreadTagLayout(col.id, x, preferredCenterY, svgWidth, col.name);
+          return getLocationTagLayout(col.id, x, preferredCenterY, svgWidth, col.name);
         })
-        .filter((tag): tag is EventThreadTagLayout => tag !== null),
+        .filter((tag): tag is LocationTagLayout => tag !== null),
       visibleTagMinY,
       visibleTagMaxY,
       EVENT_TAG_GAP,
@@ -1160,10 +1161,10 @@ export function ThreadCanvas({
     return {
       allColumns: columns,
       eventNodes: finalizedEventNodes,
-      eventThreadColumns,
-      eventThreadColorById,
-      eventThreadTags,
-      eventThreadRanges,
+      locationColumns,
+      locationColorById,
+      locationTags,
+      locationRanges,
       getY,
       gridLines,
       personColumns,
@@ -1403,7 +1404,7 @@ export function ThreadCanvas({
                 );
               }
 
-              const range = eventThreadRanges.get(col.id);
+              const range = locationRanges.get(col.id);
               if (!range) return null;
 
               const startY = Math.max(0, range.minY - 40);
@@ -1425,7 +1426,7 @@ export function ThreadCanvas({
               );
             })}
 
-            {eventThreadTags.map((tagLayout) => {
+            {locationTags.map((tagLayout) => {
               const x = threadPositions.get(tagLayout.id);
               if (x === undefined) return null;
               const tagY = tagLayout.y + tagLayout.height / 2;
@@ -1436,7 +1437,7 @@ export function ThreadCanvas({
                     y1={tagY}
                     x2={tagLayout.dotX}
                     y2={tagY}
-                    stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    stroke={locationColorById.get(tagLayout.id) || '#64748b'}
                     strokeWidth="2"
                     opacity="0.7"
                     strokeLinecap="round"
@@ -1445,7 +1446,7 @@ export function ThreadCanvas({
                     cx={tagLayout.dotX}
                     cy={tagY}
                     r={3.5}
-                    fill={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    fill={locationColorById.get(tagLayout.id) || '#64748b'}
                     opacity="0.85"
                   />
                   <rect
@@ -1456,7 +1457,7 @@ export function ThreadCanvas({
                     rx={11}
                     fill="#fbfbf7"
                     fillOpacity="0.96"
-                    stroke={eventThreadColorById.get(tagLayout.id) || '#64748b'}
+                    stroke={locationColorById.get(tagLayout.id) || '#64748b'}
                     strokeWidth="2"
                   />
                   <text

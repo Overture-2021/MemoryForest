@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Event, Person } from '../types/thread-memories';
-import { Calendar, MapPin, Users, Tag, MessageSquare, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Users, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
@@ -36,7 +36,7 @@ interface EventDetailsSheetProps {
   people: Person[];
   onEdit?: (event: Event) => void;
   onDelete?: (id: string) => void;
-  onRenameThread?: (currentThreadId: string, nextThreadId: string) => void;
+  onRenameLocation?: (currentLocation: string, nextLocation: string) => void;
 }
 
 export function EventDetailsSheet({
@@ -47,14 +47,14 @@ export function EventDetailsSheet({
   people,
   onEdit,
   onDelete,
-  onRenameThread,
+  onRenameLocation,
 }: EventDetailsSheetProps) {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [nextThreadId, setNextThreadId] = useState('');
+  const [nextLocation, setNextLocation] = useState('');
 
   useEffect(() => {
     if (!showRenameDialog) {
-      setNextThreadId(event?.threadId ?? '');
+      setNextLocation(event?.location ?? '');
     }
   }, [event, showRenameDialog]);
 
@@ -62,19 +62,19 @@ export function EventDetailsSheet({
 
   const involvedPeople = people.filter((p) => event.personIds.includes(p.id));
   const eventDate = new Date(event.timestamp);
-  const relatedThreadEvents = events.filter(
-    (candidateEvent) => candidateEvent.threadId === event.threadId,
-  );
-  const normalizedNextThreadId = nextThreadId.trim();
-  const canRenameThread =
-    !!event.threadId &&
-    normalizedNextThreadId.length > 0 &&
-    normalizedNextThreadId !== event.threadId;
+  const relatedLocationEvents = event.location
+    ? events.filter((candidateEvent) => candidateEvent.location === event.location)
+    : [];
+  const normalizedNextLocation = nextLocation.trim();
+  const canRenameLocation =
+    !!event.location &&
+    normalizedNextLocation.length > 0 &&
+    normalizedNextLocation !== event.location;
 
-  const handleRenameThread = () => {
-    if (!event.threadId || !canRenameThread) return;
+  const handleRenameLocation = () => {
+    if (!event.location || !canRenameLocation) return;
 
-    onRenameThread?.(event.threadId, normalizedNextThreadId);
+    onRenameLocation?.(event.location, normalizedNextLocation);
     setShowRenameDialog(false);
   };
 
@@ -110,7 +110,24 @@ export function EventDetailsSheet({
                   <MapPin className="h-4 w-4 shrink-0" />
                   <span>Location</span>
                 </div>
-                <p className="pl-6 text-sm leading-6 text-slate-800">{event.location}</p>
+                <div className="space-y-3 pl-6">
+                  <p className="text-sm leading-6 text-slate-800">{event.location}</p>
+                  <p className="text-xs text-slate-500">
+                    Renaming this location will update all {relatedLocationEvents.length} events
+                    grouped at it.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start sm:w-auto"
+                    onClick={() => {
+                      setNextLocation(event.location ?? '');
+                      setShowRenameDialog(true);
+                    }}
+                  >
+                    Rename Location
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -136,36 +153,6 @@ export function EventDetailsSheet({
                 ))}
               </div>
             </div>
-
-            {/* Thread ID */}
-            {event.threadId && (
-              <div className="memory-forest-detail-note space-y-3 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <Tag className="h-4 w-4 shrink-0" />
-                  <span>Event Thread</span>
-                </div>
-                <div className="space-y-3 pl-6">
-                  <p className="memory-forest-thread-note inline-flex max-w-full items-center overflow-hidden px-3 py-1.5 font-mono text-sm text-slate-700">
-                    {event.threadId}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Renaming this thread will update all {relatedThreadEvents.length} events on
-                    it.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start sm:w-auto"
-                    onClick={() => {
-                      setNextThreadId(event.threadId ?? '');
-                      setShowRenameDialog(true);
-                    }}
-                  >
-                    Rename Thread ID
-                  </Button>
-                </div>
-              </div>
-            )}
 
             {/* Interpretation */}
             {event.interpretation && (
@@ -245,21 +232,21 @@ export function EventDetailsSheet({
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename Event Thread</DialogTitle>
+            <DialogTitle>Rename Location</DialogTitle>
             <DialogDescription>
-              This will update all {relatedThreadEvents.length} events using{' '}
-              <span className="font-mono">{event.threadId}</span>. If the new ID already exists,
-              those threads will merge.
+              This will update all {relatedLocationEvents.length} events at{' '}
+              <span className="font-mono">{event.location}</span>. If the new location already
+              exists, those groups will merge.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 py-2">
-            <Label htmlFor="rename-thread-id">New thread ID</Label>
+            <Label htmlFor="rename-location">New location</Label>
             <Input
-              id="rename-thread-id"
-              value={nextThreadId}
-              onChange={(e) => setNextThreadId(e.target.value)}
-              placeholder="Enter the replacement thread ID"
+              id="rename-location"
+              value={nextLocation}
+              onChange={(e) => setNextLocation(e.target.value)}
+              placeholder="Enter the replacement location"
               autoFocus
             />
           </div>
@@ -268,8 +255,8 @@ export function EventDetailsSheet({
             <Button type="button" variant="outline" onClick={() => setShowRenameDialog(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleRenameThread} disabled={!canRenameThread}>
-              Update Thread
+            <Button type="button" onClick={handleRenameLocation} disabled={!canRenameLocation}>
+              Update Location
             </Button>
           </DialogFooter>
         </DialogContent>
