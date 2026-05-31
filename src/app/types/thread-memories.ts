@@ -11,9 +11,8 @@ export interface Event {
   timestamp: number;
   personIds: string[];
   color: string;
-  location?: string;
+  location?: string; // Doubles as the grouping key: events sharing a location form a group
   interpretation?: string;
-  threadId?: string; // For event-based organization
 }
 
 export const EVENT_COLORS = [

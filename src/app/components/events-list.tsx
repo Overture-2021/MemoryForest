@@ -7,7 +7,6 @@ import {
   Folder,
   FolderOpen,
   LocateFixed,
-  MapPin,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -40,7 +39,7 @@ interface EventsListProps {
   people: Person[];
   onEdit: (event: Event) => void;
   onDelete: (id: string) => void;
-  onDeleteThread?: (threadId: string, mode: 'liberate' | 'delete') => void;
+  onDeleteLocation?: (location: string, mode: 'liberate' | 'delete') => void;
   onView?: (event: Event) => void;
   onFocusTimeline?: (event: Event) => void;
   selectedEventId?: string | null;
@@ -54,16 +53,16 @@ interface EventGroup {
   color: string;
 }
 
-const UNTHREADED_GROUP_ID = '__unthreaded__';
+const NO_LOCATION_GROUP_ID = '__no_location__';
 
-const getEventGroupId = (event: Event) => event.threadId?.trim() || UNTHREADED_GROUP_ID;
+const getEventGroupId = (event: Event) => event.location?.trim() || NO_LOCATION_GROUP_ID;
 
 export function EventsList({
   events,
   people,
   onEdit,
   onDelete,
-  onDeleteThread,
+  onDeleteLocation,
   onView,
   onFocusTimeline,
   selectedEventId,
@@ -97,7 +96,7 @@ export function EventsList({
 
   const eventGroups = useMemo(() => {
     const groups = events.reduce<EventGroup[]>((accumulator, event) => {
-      const normalizedThreadId = event.threadId?.trim();
+      const normalizedLocation = event.location?.trim();
       const groupId = getEventGroupId(event);
       const existingGroup = accumulator.find((group) => group.id === groupId);
 
@@ -109,7 +108,7 @@ export function EventsList({
 
       accumulator.push({
         id: groupId,
-        label: normalizedThreadId || 'Standalone Events',
+        label: normalizedLocation || 'No Location',
         events: [event],
         latestTimestamp: event.timestamp,
         color: event.color,
@@ -122,8 +121,8 @@ export function EventsList({
       group.events.sort((a, b) => b.timestamp - a.timestamp);
     });
     groups.sort((a, b) => {
-      if (a.id === UNTHREADED_GROUP_ID) return -1;
-      if (b.id === UNTHREADED_GROUP_ID) return 1;
+      if (a.id === NO_LOCATION_GROUP_ID) return -1;
+      if (b.id === NO_LOCATION_GROUP_ID) return 1;
       return b.latestTimestamp - a.latestTimestamp;
     });
 
@@ -175,7 +174,7 @@ export function EventsList({
   const allGroupsExpanded = eventGroups.length > 0 && eventGroups.every((group) => isGroupExpanded(group.id));
   const allGroupsCollapsed = eventGroups.length > 0 && eventGroups.every((group) => !isGroupExpanded(group.id));
 
-  const closeDeleteThreadDialog = () => {
+  const closeDeleteLocationDialog = () => {
     setGroupPendingDeletion(null);
   };
 
@@ -217,7 +216,7 @@ export function EventsList({
         ) : (
           eventGroups.map((group) => {
             const isOpen = isGroupExpanded(group.id);
-            const isThreadGroup = group.id !== UNTHREADED_GROUP_ID;
+            const isLocationGroup = group.id !== NO_LOCATION_GROUP_ID;
 
             return (
               <Collapsible
@@ -256,7 +255,7 @@ export function EventsList({
                       </div>
                     </CollapsibleTrigger>
 
-                    {isThreadGroup && (
+                    {isLocationGroup && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -265,10 +264,10 @@ export function EventsList({
                           event.stopPropagation();
                           setGroupPendingDeletion(group);
                         }}
-                        title={`Delete thread ${group.label}`}
+                        title={`Delete location ${group.label}`}
                       >
                         <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete thread {group.label}</span>
+                        <span className="sr-only">Delete location {group.label}</span>
                       </Button>
                     )}
                   </div>
@@ -297,12 +296,6 @@ export function EventsList({
                               <Clock className="h-3 w-3" />
                               <span>{getRelativeTime(event.timestamp)}</span>
                             </div>
-                            {event.location && (
-                              <div className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{event.location}</span>
-                              </div>
-                            )}
                             {event.personIds.length > 0 && (
                               <div className="mt-0.5 truncate text-xs text-slate-500">
                                 {getPeopleNames(event.personIds)}
@@ -386,28 +379,28 @@ export function EventsList({
         )}
       </div>
 
-      <Dialog open={!!groupPendingDeletion} onOpenChange={(open) => !open && closeDeleteThreadDialog()}>
+      <Dialog open={!!groupPendingDeletion} onOpenChange={(open) => !open && closeDeleteLocationDialog()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Delete Event Thread</DialogTitle>
+            <DialogTitle>Delete Location</DialogTitle>
             <DialogDescription>
               {groupPendingDeletion ? (
                 <>
-                  Choose what to do with the {groupPendingDeletion.events.length} events in{' '}
+                  Choose what to do with the {groupPendingDeletion.events.length} events at{' '}
                   <span className="font-mono">{groupPendingDeletion.label}</span>.
                 </>
               ) : (
-                'Choose what to do with the events in this thread.'
+                'Choose what to do with the events at this location.'
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="memory-forest-thread-note px-4 py-3 text-sm text-slate-600">
-            Liberating the events keeps them, but clears their event thread assignment.
+            Liberating the events keeps them, but clears their location.
           </div>
 
           <DialogFooter className="sm:justify-between">
-            <Button type="button" variant="outline" onClick={closeDeleteThreadDialog}>
+            <Button type="button" variant="outline" onClick={closeDeleteLocationDialog}>
               Cancel
             </Button>
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -416,8 +409,8 @@ export function EventsList({
                 variant="outline"
                 onClick={() => {
                   if (!groupPendingDeletion) return;
-                  onDeleteThread?.(groupPendingDeletion.id, 'liberate');
-                  closeDeleteThreadDialog();
+                  onDeleteLocation?.(groupPendingDeletion.id, 'liberate');
+                  closeDeleteLocationDialog();
                 }}
               >
                 Liberate Events
@@ -427,8 +420,8 @@ export function EventsList({
                 className="bg-red-600 hover:bg-red-700"
                 onClick={() => {
                   if (!groupPendingDeletion) return;
-                  onDeleteThread?.(groupPendingDeletion.id, 'delete');
-                  closeDeleteThreadDialog();
+                  onDeleteLocation?.(groupPendingDeletion.id, 'delete');
+                  closeDeleteLocationDialog();
                 }}
               >
                 Delete Events Too

@@ -16,7 +16,6 @@ interface AddEventDialogProps {
     color: string,
     timestamp: number,
     interpretation?: string,
-    threadId?: string,
     location?: string,
   ) => void;
   onUpdate?: (
@@ -26,7 +25,6 @@ interface AddEventDialogProps {
     color: string,
     timestamp: number,
     interpretation?: string,
-    threadId?: string,
     location?: string,
   ) => void;
   editingEvent?: Event | null;
@@ -40,7 +38,6 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
   const [interpretation, setInterpretation] = useState('');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState(EVENT_COLORS[0]);
-  const [threadId, setThreadId] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const isEventDateValid = isValidDateInputValue(eventDate);
@@ -52,8 +49,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       setInterpretation(editingEvent.interpretation || '');
       setSelectedPeople(editingEvent.personIds);
       setSelectedColor(editingEvent.color);
-      setThreadId(editingEvent.threadId || '');
-      
+
       // Convert timestamp to date and time
       const date = new Date(editingEvent.timestamp);
       const dateStr = formatDateInputValue(date);
@@ -65,8 +61,7 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       setInterpretation('');
       setSelectedPeople([]);
       setSelectedColor(EVENT_COLORS[0]);
-      setThreadId('');
-      
+
       // Default to current date
       const now = new Date();
       setEventDate(formatDateInputValue(now));
@@ -98,17 +93,15 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
           selectedColor,
           timestamp,
           interpretation.trim() || undefined,
-          threadId.trim() || undefined,
           location.trim() || undefined
         );
       } else {
         onAdd(
-          title.trim(), 
-          selectedPeople, 
+          title.trim(),
+          selectedPeople,
           selectedColor,
           timestamp,
           interpretation.trim() || undefined,
-          threadId.trim() || undefined,
           location.trim() || undefined
         );
       }
@@ -116,7 +109,6 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
       setLocation('');
       setInterpretation('');
       setSelectedPeople([]);
-      setThreadId('');
       setEventTime('');
       onOpenChange(false);
     }
@@ -157,6 +149,9 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="E.g., Central Park, New York"
               />
+              <p className="text-xs text-slate-500">
+                Events that share a location are grouped together
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -167,19 +162,6 @@ export function AddEventDialog({ open, onOpenChange, onAdd, onUpdate, editingEve
                 onChange={(e) => setInterpretation(e.target.value)}
                 placeholder="Your custom meaning for this event"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="event-thread">Event Thread (Optional)</Label>
-              <Input
-                id="event-thread"
-                value={threadId}
-                onChange={(e) => setThreadId(e.target.value)}
-                placeholder="Group related events together"
-              />
-              <p className="text-xs text-slate-500">
-                Events with the same thread ID will be grouped in event-based view
-              </p>
             </div>
 
             <div className="space-y-2">

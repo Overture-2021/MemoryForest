@@ -13,14 +13,14 @@ The app lets you:
 
 - add people, each with their own thread color
 - add events tied to one or more people
-- optionally group events with an event thread ID
+- give events a location to group them (events sharing a location form a group)
 - view those relationships on a visual timeline canvas
 - inspect, edit, and delete people and events from the sidebar UI
 
 The main canvas renders:
 
 - vertical person threads
-- optional event-thread columns
+- optional location columns
 - horizontal connections between people and events
 - event nodes positioned by time
 
